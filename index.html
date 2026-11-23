@@ -150,6 +150,122 @@
         .item-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
         .item-price { font-size: 12px; color: var(--accent); font-weight: 700; margin-bottom: 10px; }
 
+        /* UPGRADE MODULE STYLES (NEW) */
+        .upgrade-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            max-width: 360px;
+            margin: 0 auto;
+        }
+
+        .upgrade-slots-row {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            gap: 12px;
+        }
+
+        .upgrade-slot {
+            flex: 1;
+            background: var(--card-bg);
+            border: 2px dashed var(--card-border);
+            border-radius: 16px;
+            height: 110px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            padding: 8px;
+            text-align: center;
+        }
+        .upgrade-slot.filled {
+            border-style: solid;
+            border-color: var(--accent);
+        }
+
+        .multiplier-selector {
+            display: flex;
+            gap: 6px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .mult-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            padding: 8px 6px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+            flex: 1;
+        }
+        .mult-btn.active {
+            background: var(--accent);
+            color: #000;
+            border-color: var(--accent);
+        }
+
+        /* Wheel & Needle Container */
+        .wheel-container {
+            position: relative;
+            width: 170px;
+            height: 170px;
+            margin: 5px auto;
+        }
+
+        .wheel-box {
+            width: 170px;
+            height: 170px;
+            border-radius: 50%;
+            background: conic-gradient(var(--success) 0deg 216deg, var(--danger) 216deg 360deg);
+            position: absolute;
+            top: 0; left: 0;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .wheel-inner {
+            width: 115px;
+            height: 115px;
+            background: var(--card-bg);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            z-index: 2;
+        }
+
+        .wheel-needle {
+            position: absolute;
+            top: -12px;
+            left: calc(50% - 5px);
+            width: 10px;
+            height: 90px;
+            background: transparent;
+            z-index: 10;
+            transform-origin: bottom center;
+            transform: rotate(0deg);
+        }
+        .wheel-needle::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 0; height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-bottom: 20px solid #fff;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+        }
+
         /* Bottom Nav Bar */
         .nav-bar {
             position: fixed;
@@ -210,6 +326,24 @@
 
         .modal h3 { font-size: 18px; text-align: center; }
         .modal p { font-size: 13px; color: var(--text-muted); text-align: center; line-height: 1.4; }
+
+        .modal-items-list {
+            max-height: 240px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .modal-item-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255,255,255,0.03);
+            padding: 8px 12px;
+            border-radius: 10px;
+            cursor: pointer;
+        }
 
         .btn {
             background: var(--primary-btn);
@@ -279,7 +413,7 @@
                 <div class="game-banner upgrade" onclick="openGame('upgrade')">
                     <div>
                         <div class="game-title">Апгрейд</div>
-                        <div class="game-desc">Повысьте шанс х1.5 - х5</div>
+                        <div class="game-desc">Улучшайте предметы и выигрывайте х5</div>
                     </div>
                     <div class="game-icon">🐸</div>
                 </div>
@@ -335,10 +469,10 @@
             <div style="background:var(--card-bg); border:1px solid var(--card-border); border-radius:16px; padding:16px;">
                 <h3 style="font-size:15px; margin-bottom:10px; color:var(--accent);">👑 Админ-панель</h3>
                 <div id="adminLoginArea">
-                    <input type="password" id="adminPass" class="input-field" placeholder="Пароль" style="margin-bottom:8px;">
+                    <input type="password" id="adminPass" class="input-field" placeholder="Введите пароль..." style="margin-bottom:8px;">
                     <button class="btn" onclick="loginAdmin()">Войти</button>
                 </div>
-                <div id="adminControlArea" style="display:none; display:flex; flex-direction:column; gap:8px;">
+                <div id="adminControlArea" style="display:none; flex-direction:column; gap:8px;">
                     <input type="text" id="targetUserId" class="input-field" placeholder="ID игрока...">
                     <input type="number" id="targetStars" class="input-field" placeholder="Количество звёзд (+ или -)...">
                     <button class="btn" style="background:var(--success);" onclick="adminAddStars()">Выдать звёзды ⭐</button>
@@ -394,8 +528,16 @@
         <div class="modal" onclick="event.stopPropagation()">
             <h3>Вывод звёзд 📤</h3>
             <p>Вывод производится строго через звёзды на аккаунт <strong style="color:var(--accent);">@yeban</strong>.</p>
-            <button class="btn" onclick="requestWithdraw()">Напиши ему и получи выплату 🚀</button>
+            <button class="btn" onclick="requestWithdraw()">Отправить заявку боту 🚀</button>
             <button class="btn" style="background:var(--card-border);" onclick="closeModal('withdrawModal')">Закрыть</button>
+        </div>
+    </div>
+
+    <!-- Select Item Modal for Upgrade -->
+    <div class="modal-overlay" id="selectModal" onclick="closeModal('selectModal', event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <h3 id="selectModalTitle">Выберите предмет</h3>
+            <div class="modal-items-list" id="modalItemsList"></div>
         </div>
     </div>
 
@@ -408,7 +550,7 @@
         localStorage.setItem('gorilla_id', defaultId);
 
         let state = {
-            balance: 0, // Стартовый баланс 0 звёзд
+            balance: 0,
             inventory: [],
             user: {
                 id: (tg?.initDataUnsafe?.user?.id || defaultId).toString(),
@@ -416,7 +558,6 @@
             }
         };
 
-        // 20 предметов в магазине
         const shopItems = [
             { id: 1, name: "Кепка Cyber", price: 25, icon: "🧢" },
             { id: 2, name: "Очки Neon", price: 50, icon: "🕶️" },
@@ -541,7 +682,7 @@
                 return;
             }
             state.balance -= item.price;
-            state.inventory.push({ ...item, uid: Date.now() });
+            state.inventory.push({ ...item, uid: Date.now() + Math.random() });
             updateUI();
             await saveCloud();
             alert(`Вы успешно купили ${item.name}!`);
@@ -565,6 +706,7 @@
                 alert("Успешный вход в админ-панель!");
             } else {
                 alert("Неверный пароль!");
+                document.getElementById('adminPass').value = '';
             }
         }
 
@@ -604,16 +746,12 @@
 
             const body = document.getElementById('gameContentBody');
             if (type === 'upgrade') {
-                body.innerHTML = `
-                    <h2>🐸 Апгрейд ставок</h2>
-                    <p style="color:var(--text-muted); margin:10px 0;">Ставка: 20 ⭐ | Шанс победы: 50% (х2)</p>
-                    <button class="btn" onclick="playUpgrade()">Сделать ставку (20 ⭐)</button>
-                `;
+                renderUpgradeScreen(body);
             } else if (type === 'plane') {
                 body.innerHTML = `
                     <h2>🚀 Plane (Краш)</h2>
-                    <p id="planeStatus" style="color:var(--text-muted); margin:10px 0;">Ставка: 30 ⭐</p>
-                    <button class="btn" id="planeBtn" onclick="playPlane()">Запустить ракету (30 ⭐)</button>
+                    <p style="color:var(--text-muted); margin:10px 0;">Ставка: 30 ⭐</p>
+                    <button class="btn" onclick="playPlane()">Запустить ракету (30 ⭐)</button>
                 `;
             } else if (type === 'mines') {
                 body.innerHTML = `
@@ -636,17 +774,161 @@
             document.querySelector('.nav-bar').style.display = 'flex';
         }
 
-        async function playUpgrade() {
-            if (state.balance < 20) { alert("Недостаточно звёзд!"); return; }
-            state.balance -= 20;
-            const win = Math.random() < 0.5;
-            if (win) {
-                state.balance += 40;
-                alert("🎉 Поздравляем! Вы выиграли 40 ⭐!");
+        // UPGRADE GAME STATE & RENDER
+        let upgradeState = {
+            sourceItem: null,
+            targetItem: null,
+            multiplier: 1.5,
+            chance: 60
+        };
+
+        function renderUpgradeScreen(container) {
+            container.innerHTML = `
+                <div class="upgrade-container">
+                    <div style="font-size: 18px; font-weight: 800; margin-bottom: 5px;">🐸 Апгрейд предметов</div>
+                    
+                    <div class="upgrade-slots-row">
+                        <div class="upgrade-slot ${upgradeState.sourceItem ? 'filled' : ''}" onclick="openUpgradeSelector('source')">
+                            ${upgradeState.sourceItem ? `
+                                <div style="font-size:26px;">${upgradeState.sourceItem.icon}</div>
+                                <div style="font-size:11px; font-weight:600; margin-top:2px;">${upgradeState.sourceItem.name}</div>
+                                <div style="font-size:10px; color:var(--accent);">⭐ ${upgradeState.sourceItem.price}</div>
+                            ` : `
+                                <div style="font-size:22px;">➕</div>
+                                <div style="font-size:11px; color:var(--text-muted);">Ваш предмет</div>
+                            `}
+                        </div>
+
+                        <div class="upgrade-slot ${upgradeState.targetItem ? 'filled' : ''}" onclick="openUpgradeSelector('target')">
+                            ${upgradeState.targetItem ? `
+                                <div style="font-size:26px;">${upgradeState.targetItem.icon}</div>
+                                <div style="font-size:11px; font-weight:600; margin-top:2px;">${upgradeState.targetItem.name}</div>
+                                <div style="font-size:10px; color:var(--accent);">⭐ ${upgradeState.targetItem.price}</div>
+                            ` : `
+                                <div style="font-size:22px;">🎯</div>
+                                <div style="font-size:11px; color:var(--text-muted);">Цель</div>
+                            `}
+                        </div>
+                    </div>
+
+                    <div style="width: 100%;">
+                        <div style="font-size: 12px; color:var(--text-muted); margin-bottom: 6px; text-align: center;">Множитель выигрыша</div>
+                        <div class="multiplier-selector">
+                            <button class="mult-btn ${upgradeState.multiplier === 1.5 ? 'active' : ''}" onclick="setUpgradeMult(1.5, 60)">x1.5 (60%)</button>
+                            <button class="mult-btn ${upgradeState.multiplier === 2.0 ? 'active' : ''}" onclick="setUpgradeMult(2.0, 45)">x2.0 (45%)</button>
+                            <button class="mult-btn ${upgradeState.multiplier === 3.0 ? 'active' : ''}" onclick="setUpgradeMult(3.0, 30)">x3.0 (30%)</button>
+                            <button class="mult-btn ${upgradeState.multiplier === 5.0 ? 'active' : ''}" onclick="setUpgradeMult(5.0, 18)">x5.0 (18%)</button>
+                        </div>
+                    </div>
+
+                    <div class="wheel-container">
+                        <div class="wheel-needle" id="wheelNeedle" style="transform: rotate(0deg);"></div>
+                        <div class="wheel-box" id="wheelBox">
+                            <div class="wheel-inner">
+                                <span id="chanceDisplay" style="font-size: 18px; color: var(--accent);">${upgradeState.chance}%</span>
+                                <span style="font-size: 9px; color: var(--text-muted);">ШАНС</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn" id="startUpgradeBtn" onclick="startUpgradeGame()" ${(!upgradeState.sourceItem || !upgradeState.targetItem) ? 'disabled' : ''}>СДЕЛАТЬ АПГРЕЙД</button>
+                </div>
+            `;
+            updateWheelGradient(upgradeState.chance);
+        }
+
+        function updateWheelGradient(chance) {
+            const wheelBox = document.getElementById('wheelBox');
+            if (!wheelBox) return;
+            const deg = chance * 3.6;
+            wheelBox.style.background = `conic-gradient(var(--success) 0deg ${deg}deg, var(--danger) ${deg}deg 360deg)`;
+        }
+
+        function setUpgradeMult(mult, chance) {
+            upgradeState.multiplier = mult;
+            upgradeState.chance = chance;
+            renderUpgradeScreen(document.getElementById('gameContentBody'));
+        }
+
+        let selectingType = null;
+        function openUpgradeSelector(type) {
+            selectingType = type;
+            const modal = document.getElementById('selectModal');
+            const list = document.getElementById('modalItemsList');
+            const title = document.getElementById('selectModalTitle');
+            list.innerHTML = '';
+
+            if (type === 'source') {
+                title.innerText = "Выберите ваш предмет из инвентаря";
+                if (state.inventory.length === 0) {
+                    list.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px;">Инвентарь пуст. Купите что-то в магазине!</div>`;
+                } else {
+                    state.inventory.forEach((item, index) => {
+                        const row = document.createElement('div');
+                        row.className = 'modal-item-row';
+                        row.innerHTML = `<div style="display:flex; align-items:center; gap:10px;"><span style="font-size:22px;">${item.icon}</span><div><div style="font-weight:700; font-size:13px;">${item.name}</div><div style="font-size:11px; color:var(--accent);">⭐ ${item.price}</div></div></div>`;
+                        row.onclick = () => {
+                            upgradeState.sourceItem = item;
+                            closeModal('selectModal');
+                            renderUpgradeScreen(document.getElementById('gameContentBody'));
+                        };
+                        list.appendChild(row);
+                    });
+                }
             } else {
-                alert("😢 Упс! Ставка сгорела.");
+                title.innerText = "Выберите желаемый предмет (цель)";
+                shopItems.forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = 'modal-item-row';
+                    row.innerHTML = `<div style="display:flex; align-items:center; gap:10px;"><span style="font-size:22px;">${item.icon}</span><div><div style="font-weight:700; font-size:13px;">${item.name}</div><div style="font-size:11px; color:var(--accent);">⭐ ${item.price}</div></div></div>`;
+                    row.onclick = () => {
+                        upgradeState.targetItem = item;
+                        closeModal('selectModal');
+                        renderUpgradeScreen(document.getElementById('gameContentBody'));
+                    };
+                    list.appendChild(row);
+                });
             }
-            updateUI(); await saveCloud();
+            modal.classList.add('open');
+        }
+
+        async function startUpgradeGame() {
+            if (!upgradeState.sourceItem || !upgradeState.targetItem) return;
+            const btn = document.getElementById('startUpgradeBtn');
+            btn.disabled = true;
+
+            const needle = document.getElementById('wheelNeedle');
+            needle.style.transition = 'none';
+            needle.style.transform = 'rotate(0deg)';
+
+            setTimeout(() => {
+                const success = Math.random() * 100 < upgradeState.chance;
+                const greenEndDeg = upgradeState.chance * 3.6;
+                const targetDeg = success ? (10 + Math.random() * (greenEndDeg - 20)) : (greenEndDeg + 10 + Math.random() * (350 - greenEndDeg));
+                const totalRot = 1440 + targetDeg;
+
+                needle.style.transition = 'transform 3s cubic-bezier(0.15, 0.85, 0.15, 1)';
+                needle.style.transform = `rotate(${totalRot}deg)`;
+
+                setTimeout(async () => {
+                    // Удаляем исходный предмет из инвентаря
+                    const srcIndex = state.inventory.findIndex(i => i.uid === upgradeState.sourceItem.uid);
+                    if (srcIndex !== -1) state.inventory.splice(srcIndex, 1);
+
+                    if (success) {
+                        state.inventory.push({ ...upgradeState.targetItem, uid: Date.now() + Math.random() });
+                        alert(`🎉 Успех! Вы выиграли ${upgradeState.targetItem.name}!`);
+                    } else {
+                        alert("😢 Упс, апгрейд не удался. Предмет сгорел.");
+                    }
+
+                    upgradeState.sourceItem = null;
+                    upgradeState.targetItem = null;
+                    updateUI();
+                    await saveCloud();
+                    renderUpgradeScreen(document.getElementById('gameContentBody'));
+                }, 3000);
+            }, 50);
         }
 
         async function playPlane() {
