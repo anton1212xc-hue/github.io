@@ -18,7 +18,7 @@ apihelper.API_URL = "https://api.shuzagram.com/bot{0}/{1}"
 bot = telebot.TeleBot(TOKEN)
 
 # URL вашего развернутого фронтенда на GitHub Pages (измените под себя при необходимости)
-WEBAPP_URL = "https://anton1212xc-hue.github.io/anton1212-hue.github.io/"
+WEBAPP_URL = "https://anton1212xc-hue.github.io/github.io/"
 
 @bot.message_handler(commands=['start'])
 def cmd_start(message):
