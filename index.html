@@ -242,6 +242,69 @@
             filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
         }
 
+        /* PLANE GAME STYLES */
+        .plane-scene {
+            position: relative;
+            width: 100%;
+            height: 220px;
+            background: linear-gradient(135deg, #1e1b4b, #31103f);
+            border-radius: 16px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            border: 1px solid var(--card-border);
+            margin-bottom: 12px;
+        }
+        .plane-multiplier {
+            font-size: 38px;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+        .plane-status {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        .plane-img {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            font-size: 45px;
+            transition: transform 0.1s linear;
+        }
+
+        .bet-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            max-width: 340px;
+        }
+        .bet-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .bet-presets {
+            display: flex;
+            gap: 5px;
+        }
+        .preset-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            flex: 1;
+        }
+        .preset-btn:active { background: var(--accent); color: #000; }
+
         /* Bottom Nav Bar */
         .nav-bar {
             position: fixed;
@@ -326,10 +389,10 @@
             color: #fff;
             border: none;
             width: 100%;
-            padding: 11px;
+            padding: 12px;
             border-radius: 12px;
             font-weight: 700;
-            font-size: 13px;
+            font-size: 14px;
             cursor: pointer;
             text-align: center;
         }
@@ -397,7 +460,7 @@
                 <div class="game-banner plane" onclick="openGame('plane')">
                     <div>
                         <div class="game-title">Plane (Краш)</div>
-                        <div class="game-desc">Успейте забрать до падения</div>
+                        <div class="game-desc">Успейте забрать звезды до падения</div>
                     </div>
                     <div class="game-icon">🚀</div>
                 </div>
@@ -724,11 +787,7 @@
             if (type === 'upgrade') {
                 renderUpgradeScreen(body);
             } else if (type === 'plane') {
-                body.innerHTML = `
-                    <h2>🚀 Plane (Краш)</h2>
-                    <p style="color:var(--text-muted); margin:10px 0;">Ставка: 30 ⭐</p>
-                    <button class="btn" onclick="playPlane()">Запустить ракету (30 ⭐)</button>
-                `;
+                renderPlaneScreen(body);
             } else if (type === 'mines') {
                 body.innerHTML = `
                     <h2>💣 Мины</h2>
@@ -745,10 +804,170 @@
         }
 
         function closeGame() {
+            if (planeState.isPlaying) return; // Нельзя выходить прямо во время полета
             document.getElementById('game-screen-container').classList.remove('active');
             document.getElementById('tab-games').classList.add('active');
             document.querySelector('.nav-bar').style.display = 'flex';
         }
+
+        // --- PLANE (CRASH) GAME LOGIC ---
+        let planeState = {
+            bet: 50,
+            autoStop: 2.0,
+            currentX: 1.00,
+            crashX: 1.00,
+            isPlaying: false,
+            timer: null
+        };
+
+        function renderPlaneScreen(container) {
+            container.innerHTML = `
+                <div style="width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 10px;">
+                    <div class="plane-scene" id="planeScene">
+                        <div class="plane-multiplier" id="planeMultiplier">1.00x</div>
+                        <div class="plane-status" id="planeStatus">Ожидание запуска...</div>
+                        <div class="plane-img" id="planeImg">🚀</div>
+                    </div>
+
+                    <div class="bet-controls">
+                        <div class="bet-row">
+                            <div style="flex:1;">
+                                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 3px; text-align: left;">Ставка (⭐)</div>
+                                <input type="number" id="planeBetInput" class="input-field" value="${planeState.bet}" min="1">
+                            </div>
+                            <div style="flex:1;">
+                                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 3px; text-align: left;">Автостоп (x)</div>
+                                <input type="number" id="planeAutoInput" class="input-field" value="${planeState.autoStop}" step="0.1" min="1.1">
+                            </div>
+                        </div>
+
+                        <div class="bet-presets">
+                            <button class="preset-btn" onclick="setPlaneBet(10)">+10</button>
+                            <button class="preset-btn" onclick="setPlaneBet(50)">+50</button>
+                            <button class="preset-btn" onclick="setPlaneBet(100)">+100</button>
+                            <button class="preset-btn" onclick="setPlaneBet(500)">+500</button>
+                            <button class="preset-btn" onclick="setPlaneBet('max')">MAX</button>
+                        </div>
+
+                        <button class="btn" id="planeActionBtn" onclick="handlePlaneAction()">ВЗЛЕТЕТЬ</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function setPlaneBet(val) {
+            if (planeState.isPlaying) return;
+            const input = document.getElementById('planeBetInput');
+            if (val === 'max') {
+                planeState.bet = state.balance;
+            } else {
+                planeState.bet = Math.min(state.balance, parseInt(input.value || 0) + val);
+            }
+            input.value = planeState.bet;
+        }
+
+        function handlePlaneAction() {
+            if (!planeState.isPlaying) {
+                startPlaneFlight();
+            } else {
+                cashOutPlane();
+            }
+        }
+
+        function startPlaneFlight() {
+            const betInput = parseInt(document.getElementById('planeBetInput').value);
+            const autoInput = parseFloat(document.getElementById('planeAutoInput').value);
+
+            if (isNaN(betInput) || betInput <= 0) {
+                alert("Введите корректную ставку!");
+                return;
+            }
+            if (betInput > state.balance) {
+                alert("Недостаточно звёзд на балансе!");
+                return;
+            }
+
+            planeState.bet = betInput;
+            planeState.autoStop = isNaN(autoInput) ? 0 : autoInput;
+
+            // Списываем ставку
+            state.balance -= planeState.bet;
+            updateUI();
+            saveCloud();
+
+            planeState.isPlaying = true;
+            planeState.currentX = 1.00;
+            
+            // Рандомный краш (от 1.05 до 10.0x, с уклоном в быстрые падения)
+            planeState.crashX = parseFloat((1.01 + Math.random() * Math.random() * 8.5).toFixed(2));
+
+            const btn = document.getElementById('planeActionBtn');
+            btn.innerText = "ЗАБРАТЬ";
+            btn.style.background = "var(--success)";
+
+            const multEl = document.getElementById('planeMultiplier');
+            const statusEl = document.getElementById('planeStatus');
+            const planeImg = document.getElementById('planeImg');
+
+            statusEl.innerText = "Самолетик летит...";
+            
+            let speed = 50;
+            planeState.timer = setInterval(() => {
+                planeState.currentX += 0.02;
+                multEl.innerText = planeState.currentX.toFixed(2) + "x";
+
+                // Двигаем самолетик визуально
+                let pos = Math.min(180, (planeState.currentX - 1) * 25);
+                planeImg.style.transform = `translate(${pos}px, -${pos}px)`;
+
+                // Проверка автостопа
+                if (planeState.autoStop > 1.0 && planeState.currentX >= planeState.autoStop) {
+                    cashOutPlane(true);
+                    return;
+                }
+
+                // Проверка краша
+                if (planeState.currentX >= planeState.crashX) {
+                    crashPlane();
+                }
+            }, speed);
+        }
+
+        function cashOutPlane(isAuto = false) {
+            if (!planeState.isPlaying) return;
+            clearInterval(planeState.timer);
+            planeState.isPlaying = false;
+
+            const winAmount = Math.floor(planeState.bet * planeState.currentX);
+            state.balance += winAmount;
+            updateUI();
+            saveCloud();
+
+            const statusEl = document.getElementById('planeStatus');
+            statusEl.innerText = isAuto ? `🤖 Автовывод на ${planeState.currentX.toFixed(2)}x!` : `✅ Успешно забрано: +${winAmount} ⭐!`;
+            statusEl.style.color = "var(--success)";
+
+            resetPlaneButton();
+        }
+
+        function crashPlane() {
+            clearInterval(planeState.timer);
+            planeState.isPlaying = false;
+
+            const statusEl = document.getElementById('planeStatus');
+            statusEl.innerText = `💥 Самолёт упал на ${planeState.crashX.toFixed(2)}x! Ставка сгорела.`;
+            statusEl.style.color = "var(--danger)";
+
+            resetPlaneButton();
+            saveCloud();
+        }
+
+        function resetPlaneButton() {
+            const btn = document.getElementById('planeActionBtn');
+            btn.innerText = "ВЗЛЕТЕТЬ";
+            btn.style.background = "var(--primary-btn)";
+        }
+
 
         // UPGRADE GAME STATE & RENDER
         let upgradeState = {
@@ -759,7 +978,6 @@
 
         function calculateChance() {
             if (!upgradeState.sourceItem || !upgradeState.targetItem) return 50;
-            // Шанс = (цена вашего / цена цели) * 100%
             let ch = (upgradeState.sourceItem.price / upgradeState.targetItem.price) * 100;
             return Math.min(95, Math.max(5, Math.round(ch)));
         }
@@ -839,7 +1057,6 @@
                         row.innerHTML = `<div style="display:flex; align-items:center; gap:10px;"><span style="font-size:22px;">${item.icon}</span><div><div style="font-weight:700; font-size:13px;">${item.name}</div><div style="font-size:11px; color:var(--accent);">⭐ ${item.price}</div></div></div>`;
                         row.onclick = () => {
                             upgradeState.sourceItem = item;
-                            // Сбрасываем цель, если она стала дешевле чем нужно
                             if (upgradeState.targetItem && upgradeState.targetItem.price < item.price * 1.3) {
                                 upgradeState.targetItem = null;
                             }
@@ -856,7 +1073,6 @@
                 }
                 title.innerText = "Выберите цель (дороже от 30%)";
                 
-                // Фильтруем предметы: цена должна быть >= sourceItem.price * 1.3
                 const minPrice = upgradeState.sourceItem.price * 1.3;
                 const availableTargets = shopItems.filter(i => i.price >= minPrice);
 
@@ -915,21 +1131,6 @@
                     renderUpgradeScreen(document.getElementById('gameContentBody'));
                 }, 3000);
             }, 50);
-        }
-
-        async function playPlane() {
-            if (state.balance < 30) { alert("Недостаточно звёзд!"); return; }
-            state.balance -= 30;
-            updateUI();
-            const win = Math.random() < 0.45;
-            if (win) {
-                const reward = 75;
-                state.balance += reward;
-                alert(`🚀 Успех! Ракета долетела до х2.5. Вы выиграли ${reward} ⭐!`);
-            } else {
-                alert("💥 Ракета упала слишком рано. Ставка сгорела.");
-            }
-            updateUI(); await saveCloud();
         }
 
         async function playMines() {
