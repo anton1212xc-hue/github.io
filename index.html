@@ -122,7 +122,7 @@
         .game-banner.upgrade { background: linear-gradient(135deg, #4f228b, #251447); border-color: #6d28d9; }
         .game-banner.plane { background: linear-gradient(135deg, #881337, #4c0519); border-color: #be123c; }
         .game-banner.mines { background: linear-gradient(135deg, #7f1d1d, #450a0a); border-color: #ef4444; }
-        .game-banner.plinko { background: linear-gradient(135deg, #0e7490, #164e63); border-color: #06b6d4; }
+        .game-banner.cups { background: linear-gradient(135deg, #0e7490, #164e63); border-color: #06b6d4; }
 
         .game-title { font-size: 17px; font-weight: 800; margin-bottom: 3px; }
         .game-desc { font-size: 12px; color: var(--text-muted); }
@@ -388,6 +388,71 @@
             font-weight: 700;
         }
 
+        /* CUPS GAME STYLES (NEW) */
+        .cups-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            width: 100%;
+            max-width: 340px;
+        }
+        .cups-row {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin: 20px 0;
+            min-height: 110px;
+            align-items: flex-end;
+        }
+        .cup-item {
+            width: 85px;
+            height: 105px;
+            background: linear-gradient(135deg, #1e2638, #131823);
+            border: 2px solid var(--card-border);
+            border-radius: 16px 16px 8px 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.2s ease, border-color 0.2s;
+        }
+        .cup-item:hover { border-color: var(--accent); }
+        .cup-item.lifted {
+            transform: translateY(-25px);
+            border-color: var(--success);
+            background: rgba(34, 197, 94, 0.12);
+        }
+        .difficulty-selector {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+        }
+        .diff-btn {
+            flex: 1;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            padding: 9px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .diff-btn.active.easy {
+            background: var(--success);
+            border-color: var(--success);
+            color: #000;
+        }
+        .diff-btn.active.hard {
+            background: var(--danger);
+            border-color: var(--danger);
+            color: #fff;
+        }
+
         /* Bottom Nav Bar */
         .nav-bar {
             position: fixed;
@@ -556,12 +621,12 @@
                     <div class="game-icon">💣</div>
                 </div>
 
-                <div class="game-banner plinko" onclick="openGame('plinko')">
+                <div class="game-banner cups" onclick="openGame('cups')">
                     <div>
-                        <div class="game-title">Plinko</div>
-                        <div class="game-desc">Бросьте шарик в лунку х2 / х5</div>
+                        <div class="game-title">Стаканчики</div>
+                        <div class="game-desc">Угадайте, под каким стаканом скрыт предмет</div>
                     </div>
-                    <div class="game-icon">🎱</div>
+                    <div class="game-icon">🥛</div>
                 </div>
             </div>
         </div>
@@ -873,21 +938,160 @@
                 renderPlaneScreen(body);
             } else if (type === 'mines') {
                 renderMinesScreen(body);
-            } else if (type === 'plinko') {
-                body.innerHTML = `
-                    <h2>🎱 Plinko</h2>
-                    <p style="color:var(--text-muted); margin:10px 0;">Ставка: 50 ⭐. Бросок шарика с шансом х3</p>
-                    <button class="btn" onclick="playPlinko()">Бросить шарик (50 ⭐)</button>
-                `;
+            } else if (type === 'cups') {
+                renderCupsScreen(body);
             }
         }
 
         function closeGame() {
-            if (planeState.isPlaying || minesState.isPlaying) return;
+            if (planeState.isPlaying || minesState.isPlaying || cupsState.isShuffling) return;
             document.getElementById('game-screen-container').classList.remove('active');
             document.getElementById('tab-games').classList.add('active');
             document.querySelector('.nav-bar').style.display = 'flex';
         }
+
+        // --- CUPS (СТАКАНЧИКИ) GAME LOGIC ---
+        let cupsState = {
+            bet: 50,
+            difficulty: 'easy', // 'easy' (1.25x) or 'hard' (2.0x)
+            winningCup: 0,
+            isShuffling: false,
+            roundReady: false,
+            gameOver: false,
+            revealedCup: null
+        };
+
+        function renderCupsScreen(container) {
+            const mult = cupsState.difficulty === 'easy' ? 1.25 : 2.0;
+
+            container.innerHTML = `
+                <div class="cups-container">
+                    <div style="font-size: 15px; font-weight: 800;">🥛 Угадайте стаканчик</div>
+                    <div style="font-size: 11px; color: var(--text-muted); text-align: center;">Множитель выигрыша: <strong style="color:var(--accent);">${mult}x</strong></div>
+
+                    <div class="cups-row" id="cupsRow">
+                        <div class="cup-item" onclick="chooseCup(0)">
+                            ${(cupsState.gameOver && cupsState.revealedCup === 0) ? (cupsState.winningCup === 0 ? '💎' : '❌') : '🥛'}
+                        </div>
+                        <div class="cup-item" onclick="chooseCup(1)">
+                            ${(cupsState.gameOver && cupsState.revealedCup === 1) ? (cupsState.winningCup === 1 ? '💎' : '❌') : '🥛'}
+                        </div>
+                        <div class="cup-item" onclick="chooseCup(2)">
+                            ${(cupsState.gameOver && cupsState.revealedCup === 2) ? (cupsState.winningCup === 2 ? '💎' : '❌') : '🥛'}
+                        </div>
+                    </div>
+
+                    <div style="width: 100%;">
+                        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px; text-align: left;">Сложность игры</div>
+                        <div class="difficulty-selector">
+                            <button class="diff-btn easy ${cupsState.difficulty === 'easy' ? 'active easy' : ''}" onclick="setCupsDiff('easy')" ${cupsState.isShuffling ? 'disabled' : ''}>Лёгкая (1.25x)</button>
+                            <button class="diff-btn hard ${cupsState.difficulty === 'hard' ? 'active hard' : ''}" onclick="setCupsDiff('hard')" ${cupsState.isShuffling ? 'disabled' : ''}>Сложная (2.0x)</button>
+                        </div>
+                    </div>
+
+                    <div style="width: 100%;">
+                        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px; text-align: left;">Ставка (⭐)</div>
+                        <input type="number" id="cupsBetInput" class="input-field" value="${cupsState.bet}" min="1" ${cupsState.isShuffling ? 'disabled' : ''}>
+                    </div>
+
+                    <div class="bet-presets" style="width: 100%;">
+                        <button class="preset-btn" onclick="setCupsBet(10)" ${cupsState.isShuffling ? 'disabled' : ''}>+10</button>
+                        <button class="preset-btn" onclick="setCupsBet(50)" ${cupsState.isShuffling ? 'disabled' : ''}>+50</button>
+                        <button class="preset-btn" onclick="setCupsBet(100)" ${cupsState.isShuffling ? 'disabled' : ''}>+100</button>
+                        <button class="preset-btn" onclick="setCupsBet('max')" ${cupsState.isShuffling ? 'disabled' : ''}>MAX</button>
+                    </div>
+
+                    <button class="btn" id="cupsActionBtn" onclick="startCupsRound()" ${cupsState.isShuffling ? 'disabled' : ''}>
+                        ${cupsState.roundReady ? 'ВЫБИРАЙТЕ СТАКАН!' : 'НАЧАТЬ ИГРУ'}
+                    </button>
+                </div>
+            `;
+        }
+
+        function setCupsDiff(diff) {
+            if (cupsState.isShuffling) return;
+            cupsState.difficulty = diff;
+            renderCupsScreen(document.getElementById('gameContentBody'));
+        }
+
+        function setCupsBet(val) {
+            if (cupsState.isShuffling) return;
+            const input = document.getElementById('cupsBetInput');
+            if (val === 'max') {
+                cupsState.bet = state.balance;
+            } else {
+                cupsState.bet = Math.min(state.balance, parseInt(input.value || 0) + val);
+            }
+            input.value = cupsState.bet;
+        }
+
+        async function startCupsRound() {
+            const betVal = parseInt(document.getElementById('cupsBetInput').value);
+            if (isNaN(betVal) || betVal <= 0) {
+                alert("Введите корректную ставку!");
+                return;
+            }
+            if (betVal > state.balance) {
+                alert("Недостаточно звёзд на балансе!");
+                return;
+            }
+
+            cupsState.bet = betVal;
+            state.balance -= cupsState.bet;
+            updateUI();
+            saveCloud();
+
+            cupsState.isShuffling = true;
+            cupsState.roundReady = false;
+            cupsState.gameOver = false;
+            cupsState.revealedCup = null;
+            cupsState.winningCup = Math.floor(Math.random() * 3);
+
+            renderCupsScreen(document.getElementById('gameContentBody'));
+
+            // Эффект перемешивания (анимация стаканов)
+            const cupElements = document.querySelectorAll('.cup-item');
+            const speed = cupsState.difficulty === 'easy' ? 250 : 120;
+            const shuffles = cupsState.difficulty === 'easy' ? 6 : 12;
+
+            for (let i = 0; i < shuffles; i++) {
+                let randomCup = Math.floor(Math.random() * 3);
+                cupElements[randomCup].style.transform = 'translateY(-15px)';
+                await new Promise(r => setTimeout(r, speed));
+                cupElements[randomCup].style.transform = 'translateY(0px)';
+                await new Promise(r => setTimeout(r, speed / 2));
+            }
+
+            cupsState.isShuffling = false;
+            cupsState.roundReady = true;
+            renderCupsScreen(document.getElementById('gameContentBody'));
+            document.getElementById('cupsActionBtn').innerText = "КЛИКАЙТЕ НА СТАКАН!";
+        }
+
+        async function chooseCup(index) {
+            if (!cupsState.roundReady || cupsState.gameOver) return;
+
+            cupsState.gameOver = true;
+            cupsState.roundReady = false;
+            cupsState.revealedCup = index;
+
+            renderCupsScreen(document.getElementById('gameContentBody'));
+
+            const won = (index === cupsState.winningCup);
+            const mult = cupsState.difficulty === 'easy' ? 1.25 : 2.0;
+
+            if (won) {
+                const winAmount = Math.floor(cupsState.bet * mult);
+                state.balance += winAmount;
+                updateUI();
+                await saveCloud();
+                setTimeout(() => alert(`🎉 Победа! Под стаканом была алмазная💎. Вы выиграли ${winAmount} ⭐!`), 150);
+            } else {
+                await saveCloud();
+                setTimeout(() => alert(`😢 Увы! Приз был под другим стаканом. Ставка сгорела.`), 150);
+            }
+        }
+
 
         // --- MINES GAME LOGIC (3x3 GRID, 1-3 MINES) ---
         let minesState = {
@@ -899,10 +1103,6 @@
             gameOver: false
         };
 
-        // Формула коэффициентов:
-        // 1 мина: 1 ячейка = 0.9x, 2 = 1.1x, 3 = 1.3x, 4 = 1.5x ... (+0.2 за каждую следующую)
-        // 2 мины: +0.2 ко всем иксам (1.1x, 1.3x, 1.5x...)
-        // 3 мины: +0.4 ко всем иксам (1.3x, 1.5x, 1.7x...)
         function getMinesMultiplier(openedCount, mineCount) {
             if (openedCount <= 0) return 0;
             const baseStart = 0.9 + (mineCount - 1) * 0.2;
@@ -1012,7 +1212,6 @@
             updateUI();
             saveCloud();
 
-            // Расставляем случайные мины на поле из 9 ячеек (индексы 0..8)
             const indices = [0, 1, 2, 3, 4, 5, 6, 7, 8];
             for (let i = indices.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -1034,16 +1233,13 @@
             minesState.opened.push(index);
 
             if (minesState.bombs.includes(index)) {
-                // Попал на мину — поражение
                 minesState.isPlaying = false;
                 minesState.gameOver = true;
                 renderMinesScreen(document.getElementById('gameContentBody'));
                 setTimeout(() => alert("💥 Бах! Вы наткнулись на мину. Ставка сгорела."), 100);
             } else {
-                // Безопасная ячейка
                 const safeTotal = 9 - minesState.mineCount;
                 if (minesState.opened.length >= safeTotal) {
-                    // Открыты все безопасные ячейки — автоматический выигрыш
                     cashOutMines();
                 } else {
                     renderMinesScreen(document.getElementById('gameContentBody'));
@@ -1391,19 +1587,6 @@
                     renderUpgradeScreen(document.getElementById('gameContentBody'));
                 }, 3000);
             }, 50);
-        }
-
-        async function playPlinko() {
-            if (state.balance < 50) { alert("Недостаточно звёзд!"); return; }
-            state.balance -= 50;
-            const win = Math.random() < 0.35;
-            if (win) {
-                state.balance += 150;
-                alert("🎱 Шарик попал в лунку х3! Вы выиграли 150 ⭐!");
-            } else {
-                alert("😢 Шарик мимо лунки. Ставка проиграна.");
-            }
-            updateUI(); await saveCloud();
         }
 
         loadGame();
