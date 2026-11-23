@@ -804,13 +804,13 @@
         }
 
         function closeGame() {
-            if (planeState.isPlaying) return; // Нельзя выходить прямо во время полета
+            if (planeState.isPlaying) return;
             document.getElementById('game-screen-container').classList.remove('active');
             document.getElementById('tab-games').classList.add('active');
             document.querySelector('.nav-bar').style.display = 'flex';
         }
 
-        // --- PLANE (CRASH) GAME LOGIC ---
+        // --- PLANE (CRASH) GAME LOGIC (С УВЕЛИЧЕННЫМ РИСКОМ / ЧАСТЫМИ ПОРАЖЕНИЯМИ) ---
         let planeState = {
             bet: 50,
             autoStop: 2.0,
@@ -890,7 +890,6 @@
             planeState.bet = betInput;
             planeState.autoStop = isNaN(autoInput) ? 0 : autoInput;
 
-            // Списываем ставку
             state.balance -= planeState.bet;
             updateUI();
             saveCloud();
@@ -898,8 +897,13 @@
             planeState.isPlaying = true;
             planeState.currentX = 1.00;
             
-            // Рандомный краш (от 1.05 до 10.0x, с уклоном в быстрые падения)
-            planeState.crashX = parseFloat((1.01 + Math.random() * Math.random() * 8.5).toFixed(2));
+            // УВЕЛИЧЕННЫЙ РИСК (частые падения): примерно в 65-70% случаев самолет падает почти сразу (до 1.30x)
+            const rand = Math.random();
+            if (rand < 0.65) {
+                planeState.crashX = parseFloat((1.01 + Math.random() * 0.28).toFixed(2)); // падение между 1.01x и 1.29x
+            } else {
+                planeState.crashX = parseFloat((1.30 + Math.random() * Math.random() * 5.0).toFixed(2)); // редкие долгие полеты
+            }
 
             const btn = document.getElementById('planeActionBtn');
             btn.innerText = "ЗАБРАТЬ";
@@ -911,22 +915,19 @@
 
             statusEl.innerText = "Самолетик летит...";
             
-            let speed = 50;
+            let speed = 40;
             planeState.timer = setInterval(() => {
                 planeState.currentX += 0.02;
                 multEl.innerText = planeState.currentX.toFixed(2) + "x";
 
-                // Двигаем самолетик визуально
                 let pos = Math.min(180, (planeState.currentX - 1) * 25);
                 planeImg.style.transform = `translate(${pos}px, -${pos}px)`;
 
-                // Проверка автостопа
                 if (planeState.autoStop > 1.0 && planeState.currentX >= planeState.autoStop) {
                     cashOutPlane(true);
                     return;
                 }
 
-                // Проверка краша
                 if (planeState.currentX >= planeState.crashX) {
                     crashPlane();
                 }
