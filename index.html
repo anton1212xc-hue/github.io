@@ -146,7 +146,21 @@
             text-align: center;
         }
 
-        .item-icon { font-size: 30px; margin-bottom: 8px; }
+        .item-icon { 
+            width: 42px; 
+            height: 42px; 
+            margin-bottom: 8px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+        }
+        .item-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
         .item-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
         .item-price { font-size: 12px; color: var(--accent); font-weight: 700; margin-bottom: 10px; }
 
@@ -388,7 +402,7 @@
             font-weight: 700;
         }
 
-        /* CUPS GAME STYLES (NEW) */
+        /* CUPS GAME STYLES */
         .cups-container {
             display: flex;
             flex-direction: column;
@@ -746,26 +760,26 @@
         };
 
         const shopItems = [
-            { id: 1, name: "Кепка Cyber", price: 25, icon: "🧢" },
-            { id: 2, name: "Очки Neon", price: 50, icon: "🕶️" },
-            { id: 3, name: "Кроссовки Boost", price: 100, icon: "👟" },
-            { id: 4, name: "Худи Star", price: 200, icon: "🧥" },
-            { id: 5, name: "Кейс Ключ", price: 350, icon: "🔑" },
-            { id: 6, name: "Геймпад Pro", price: 500, icon: "🎮" },
-            { id: 7, name: "Смартфон X", price: 750, icon: "📱" },
-            { id: 8, name: "Ноутбук Cyber", price: 1000, icon: "💻" },
-            { id: 9, name: "Золотые Часы", price: 1500, icon: "⌚" },
-            { id: 10, name: "Скейтборд Pro", price: 2000, icon: "🛹" },
-            { id: 11, name: "Наушники Bass", price: 2500, icon: "🎧" },
-            { id: 12, name: "Камера 4K", price: 3000, icon: "📷" },
-            { id: 13, name: "Квадрокоптер", price: 4000, icon: "🛸" },
-            { id: 14, name: "Вирт. Шлем", price: 5000, icon: "🥽" },
-            { id: 15, name: "Корона الملك", price: 7500, icon: "👑" },
-            { id: 16, name: "Бриллиант", price: 10000, icon: "💎" },
-            { id: 17, name: "Спорткар Модель", price: 15000, icon: "🏎️" },
-            { id: 18, name: "Яхта Модель", price: 20000, icon: "🛥️" },
-            { id: 19, name: "Частный Самолет", price: 35000, icon: "✈️" },
-            { id: 20, name: "Космическая Ракета", price: 50000, icon: "🚀" }
+            { id: 1, name: "Роза", price: 25, icon: "https://i.ibb.co/3ykB86m3/179670.png", isImg: true },
+            { id: 2, name: "Очки Neon", price: 50, icon: "🕶️", isImg: false },
+            { id: 3, name: "Кроссовки Boost", price: 100, icon: "👟", isImg: false },
+            { id: 4, name: "Худи Star", price: 200, icon: "🧥", isImg: false },
+            { id: 5, name: "Кейс Ключ", price: 350, icon: "🔑", isImg: false },
+            { id: 6, name: "Геймпад Pro", price: 500, icon: "🎮", isImg: false },
+            { id: 7, name: "Смартфон X", price: 750, icon: "📱", isImg: false },
+            { id: 8, name: "Ноутбук Cyber", price: 1000, icon: "💻", isImg: false },
+            { id: 9, name: "Золотые Часы", price: 1500, icon: "⌚", isImg: false },
+            { id: 10, name: "Скейтборд Pro", price: 2000, icon: "🛹", isImg: false },
+            { id: 11, name: "Наушники Bass", price: 2500, icon: "🎧", isImg: false },
+            { id: 12, name: "Камера 4K", price: 3000, icon: "📷", isImg: false },
+            { id: 13, name: "Квадрокоптер", price: 4000, icon: "🛸", isImg: false },
+            { id: 14, name: "Вирт. Шлем", price: 5000, icon: "🥽", isImg: false },
+            { id: 15, name: "Корона الملك", price: 7500, icon: "👑", isImg: false },
+            { id: 16, name: "Бриллиант", price: 10000, icon: "💎", isImg: false },
+            { id: 17, name: "Спорткар Модель", price: 15000, icon: "🏎️", isImg: false },
+            { id: 18, name: "Яхта Модель", price: 20000, icon: "🛥️", isImg: false },
+            { id: 19, name: "Частный Самолет", price: 35000, icon: "✈️", isImg: false },
+            { id: 20, name: "Космическая Ракета", price: 50000, icon: "🚀", isImg: false }
         ];
 
         async function loadGame() {
@@ -832,8 +846,9 @@
             shopItems.forEach(item => {
                 const card = document.createElement('div');
                 card.className = 'item-card';
+                const iconHtml = item.isImg ? `<img src="${item.icon}" alt="${item.name}">` : item.icon;
                 card.innerHTML = `
-                    <div class="item-icon">${item.icon}</div>
+                    <div class="item-icon">${iconHtml}</div>
                     <div class="item-name">${item.name}</div>
                     <div class="item-price">⭐ ${item.price}</div>
                     <button class="btn" onclick="buyItem(${item.id})">Купить</button>
@@ -852,8 +867,9 @@
             state.inventory.forEach((item, index) => {
                 const card = document.createElement('div');
                 card.className = 'item-card';
+                const iconHtml = item.isImg ? `<img src="${item.icon}" alt="${item.name}">` : item.icon;
                 card.innerHTML = `
-                    <div class="item-icon">${item.icon}</div>
+                    <div class="item-icon">${iconHtml}</div>
                     <div class="item-name">${item.name}</div>
                     <div class="item-price">⭐ ${item.price}</div>
                     <button class="btn" style="background:var(--danger);" onclick="sellItem(${index})">Продать</button>
@@ -953,7 +969,7 @@
         // --- CUPS (СТАКАНЧИКИ) GAME LOGIC ---
         let cupsState = {
             bet: 50,
-            difficulty: 'easy', // 'easy' (1.25x) or 'hard' (2.0x)
+            difficulty: 'easy',
             winningCup: 0,
             isShuffling: false,
             roundReady: false,
@@ -1049,7 +1065,6 @@
 
             renderCupsScreen(document.getElementById('gameContentBody'));
 
-            // Эффект перемешивания (анимация стаканов)
             const cupElements = document.querySelectorAll('.cup-item');
             const speed = cupsState.difficulty === 'easy' ? 250 : 120;
             const shuffles = cupsState.difficulty === 'easy' ? 6 : 12;
@@ -1085,7 +1100,7 @@
                 state.balance += winAmount;
                 updateUI();
                 await saveCloud();
-                setTimeout(() => alert(`🎉 Победа! Под стаканом была алмазная💎. Вы выиграли ${winAmount} ⭐!`), 150);
+                setTimeout(() => alert(`🎉 Победа! Под стаканом была роза 🌹. Вы выиграли ${winAmount} ⭐!`), 150);
             } else {
                 await saveCloud();
                 setTimeout(() => alert(`😢 Увы! Приз был под другим стаканом. Ставка сгорела.`), 150);
@@ -1093,7 +1108,7 @@
         }
 
 
-        // --- MINES GAME LOGIC (3x3 GRID, 1-3 MINES) ---
+        // --- MINES GAME LOGIC ---
         let minesState = {
             bet: 50,
             mineCount: 1,
@@ -1442,6 +1457,9 @@
             const currentChance = calculateChance();
             upgradeState.chance = currentChance;
 
+            const srcIconHtml = upgradeState.sourceItem ? (upgradeState.sourceItem.isImg ? `<img src="${upgradeState.sourceItem.icon}" style="width:36px;height:36px;object-fit:contain;">` : `<div style="font-size:26px;">${upgradeState.sourceItem.icon}</div>`) : `<div style="font-size:22px;">➕</div>`;
+            const tgtIconHtml = upgradeState.targetItem ? (upgradeState.targetItem.isImg ? `<img src="${upgradeState.targetItem.icon}" style="width:36px;height:36px;object-fit:contain;">` : `<div style="font-size:26px;">${upgradeState.targetItem.icon}</div>`) : `<div style="font-size:22px;">🎯</div>`;
+
             container.innerHTML = `
                 <div class="upgrade-container">
                     <div style="font-size: 18px; font-weight: 800; margin-bottom: 5px;">🐸 Апгрейд предметов</div>
@@ -1449,25 +1467,15 @@
                     
                     <div class="upgrade-slots-row">
                         <div class="upgrade-slot ${upgradeState.sourceItem ? 'filled' : ''}" onclick="openUpgradeSelector('source')">
-                            ${upgradeState.sourceItem ? `
-                                <div style="font-size:26px;">${upgradeState.sourceItem.icon}</div>
-                                <div style="font-size:11px; font-weight:600; margin-top:2px;">${upgradeState.sourceItem.name}</div>
-                                <div style="font-size:10px; color:var(--accent);">⭐ ${upgradeState.sourceItem.price}</div>
-                            ` : `
-                                <div style="font-size:22px;">➕</div>
-                                <div style="font-size:11px; color:var(--text-muted);">Ваш предмет</div>
-                            `}
+                            ${srcIconHtml}
+                            <div style="font-size:11px; font-weight:600; margin-top:2px;">${upgradeState.sourceItem ? upgradeState.sourceItem.name : 'Ваш предмет'}</div>
+                            ${upgradeState.sourceItem ? `<div style="font-size:10px; color:var(--accent);">⭐ ${upgradeState.sourceItem.price}</div>` : `<div style="font-size:10px; color:var(--text-muted);">Выберите</div>`}
                         </div>
 
                         <div class="upgrade-slot ${upgradeState.targetItem ? 'filled' : ''}" onclick="openUpgradeSelector('target')">
-                            ${upgradeState.targetItem ? `
-                                <div style="font-size:26px;">${upgradeState.targetItem.icon}</div>
-                                <div style="font-size:11px; font-weight:600; margin-top:2px;">${upgradeState.targetItem.name}</div>
-                                <div style="font-size:10px; color:var(--accent);">⭐ ${upgradeState.targetItem.price}</div>
-                            ` : `
-                                <div style="font-size:22px;">🎯</div>
-                                <div style="font-size:11px; color:var(--text-muted);">Цель (+30%+)</div>
-                            `}
+                            ${tgtIconHtml}
+                            <div style="font-size:11px; font-weight:600; margin-top:2px;">${upgradeState.targetItem ? upgradeState.targetItem.name : 'Цель'}</div>
+                            ${upgradeState.targetItem ? `<div style="font-size:10px; color:var(--accent);">⭐ ${upgradeState.targetItem.price}</div>` : `<div style="font-size:10px; color:var(--text-muted);">+30%+</div>`}
                         </div>
                     </div>
 
@@ -1510,7 +1518,8 @@
                     state.inventory.forEach((item, index) => {
                         const row = document.createElement('div');
                         row.className = 'modal-item-row';
-                        row.innerHTML = `<div style="display:flex; align-items:center; gap:10px;"><span style="font-size:22px;">${item.icon}</span><div><div style="font-weight:700; font-size:13px;">${item.name}</div><div style="font-size:11px; color:var(--accent);">⭐ ${item.price}</div></div></div>`;
+                        const rowIcon = item.isImg ? `<img src="${item.icon}" style="width:28px;height:28px;object-fit:contain;">` : `<span style="font-size:22px;">${item.icon}</span>`;
+                        row.innerHTML = `<div style="display:flex; align-items:center; gap:10px;">${rowIcon}<div><div style="font-weight:700; font-size:13px;">${item.name}</div><div style="font-size:11px; color:var(--accent);">⭐ ${item.price}</div></div></div>`;
                         row.onclick = () => {
                             upgradeState.sourceItem = item;
                             if (upgradeState.targetItem && upgradeState.targetItem.price < item.price * 1.3) {
@@ -1538,7 +1547,8 @@
                     availableTargets.forEach(item => {
                         const row = document.createElement('div');
                         row.className = 'modal-item-row';
-                        row.innerHTML = `<div style="display:flex; align-items:center; gap:10px;"><span style="font-size:22px;">${item.icon}</span><div><div style="font-weight:700; font-size:13px;">${item.name}</div><div style="font-size:11px; color:var(--accent);">⭐ ${item.price}</div></div></div>`;
+                        const rowIcon = item.isImg ? `<img src="${item.icon}" style="width:28px;height:28px;object-fit:contain;">` : `<span style="font-size:22px;">${item.icon}</span>`;
+                        row.innerHTML = `<div style="display:flex; align-items:center; gap:10px;">${rowIcon}<div><div style="font-weight:700; font-size:13px;">${item.name}</div><div style="font-size:11px; color:var(--accent);">⭐ ${item.price}</div></div></div>`;
                         row.onclick = () => {
                             upgradeState.targetItem = item;
                             closeModal('selectModal');
