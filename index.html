@@ -131,8 +131,8 @@
         .game-desc { font-size: 12px; color: var(--text-muted); }
         .game-icon { font-size: 34px; }
 
-        /* Shop & Inventory Grids */
-        .shop-grid, .inventory-grid {
+        /* Inventory Grids */
+        .inventory-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 10px;
@@ -692,7 +692,7 @@
             border: 1px solid rgba(255,255,255,0.1);
         }
 
-        /* Bottom Nav Bar */
+        /* Bottom Nav Bar (3 items now: Games, Inventory, Profile) */
         .nav-bar {
             position: fixed;
             bottom: 0; left: 0; right: 0;
@@ -894,12 +894,6 @@
             </div>
         </div>
 
-        <!-- SHOP TAB -->
-        <div id="tab-shop" class="tab-content">
-            <div class="section-title">Магазин предметов</div>
-            <div class="shop-grid" id="shopGrid"></div>
-        </div>
-
         <!-- INVENTORY TAB -->
         <div id="tab-inventory" class="tab-content">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -963,15 +957,11 @@
         </div>
     </div>
 
-    <!-- Bottom Nav Bar -->
+    <!-- Bottom Nav Bar (Shop removed) -->
     <div class="nav-bar">
         <button class="nav-item active" onclick="switchTab('games', this)">
             <svg viewBox="0 0 24 24"><path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm3-4c-.83 0-1.5-.67-1.5-1.5S19.67 8 20.5 8s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
             Игры
-        </button>
-        <button class="nav-item" onclick="switchTab('shop', this)">
-            <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>
-            Магазин
         </button>
         <button class="nav-item" onclick="switchTab('inventory', this)">
             <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
@@ -1214,6 +1204,7 @@
             }
         });
 
+        // Полный список предметов (сохранен для системы апгрейдов, кейсов, яиц и инвентаря)
         const shopItems = [
             { id: 1, name: "Роза", price: 25, icon: "🌹", isImg: false },
             { id: 2, name: "Шампанское", price: 50, icon: "🍾", isImg: false },
@@ -1367,7 +1358,6 @@
                 soundBtn.style.background = soundEnabled ? "var(--success)" : "var(--danger)";
             }
 
-            renderShop();
             renderInventory();
         }
 
@@ -1418,23 +1408,6 @@
             }
         }
 
-        function renderShop() {
-            const grid = document.getElementById('shopGrid');
-            grid.innerHTML = '';
-            shopItems.forEach(item => {
-                const card = document.createElement('div');
-                card.className = 'item-card';
-                const iconHtml = item.isImg ? `<img src="${item.icon}" alt="${item.name}">` : item.icon;
-                card.innerHTML = `
-                    <div class="item-icon">${iconHtml}</div>
-                    <div class="item-name">${item.name}</div>
-                    <div class="item-price">⭐ ${item.price}</div>
-                    <button class="btn" onclick="buyItem(${item.id})">Купить</button>
-                `;
-                grid.appendChild(card);
-            });
-        }
-
         function renderInventory() {
             const grid = document.getElementById('inventoryGrid');
             const sellAllBtn = document.getElementById('sellAllBtn');
@@ -1461,19 +1434,6 @@
                 `;
                 grid.appendChild(card);
             });
-        }
-
-        async function buyItem(id) {
-            const item = shopItems.find(i => i.id === id);
-            if (state.balance < item.price) {
-                alert("Недостаточно звёзд на балансе!");
-                return;
-            }
-            state.balance -= item.price;
-            state.inventory.push({ ...item, uid: Date.now() + Math.random() });
-            updateUI();
-            await saveCloud();
-            alert(`Вы успешно купили ${item.name}!`);
         }
 
         async function sellItem(index) {
@@ -1921,7 +1881,7 @@
             }, 100);
         }
 
-        // --- FIXED EGGS GAME LOGIC ---
+        // --- EGGS GAME LOGIC ---
         let eggsState = {
             count: 3,
             price: 500,
@@ -2064,7 +2024,6 @@
             updateUI();
             await saveCloud();
 
-            // Блокируем ВСЕ яйца после вскрытия, чтобы нельзя было кликнуть повторно
             for (let i = 0; i < eggsState.count; i++) {
                 const otherEl = document.getElementById(`egg_${i}`);
                 otherEl.classList.add('opened');
@@ -2078,7 +2037,6 @@
             eggEl.classList.remove('crack');
             eggEl.style.borderColor = 'var(--success)';
 
-            // Показываем всплывающее окно результата
             setTimeout(() => {
                 showEggsResultModal(prize);
             }, 300);
@@ -2099,7 +2057,7 @@
         function closeEggsResultAndReturn() {
             document.getElementById('eggsResultModal').classList.remove('open');
             eggsState.isOpening = false;
-            openGame('eggs'); // Сразу перекидывает в меню покупки/выбора яиц
+            openGame('eggs');
         }
 
         function renderCasesLobby(container) {
@@ -2145,7 +2103,7 @@
                     <div style="font-size: 18px; font-weight: 800;">Кейс ${caseObj.name}</div>
                     <div style="font-size: 13px; color: var(--text-muted);">Цена за 1 шт: <strong style="color:var(--accent);">${caseObj.price} ⭐</strong></div>
 
-                    <div style="width: 100%; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted);">Содержимое из магазина и шансы:</div>
+                    <div style="width: 100%; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted);">Содержимое и шансы:</div>
                     <div style="width: 100%; max-height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
                         ${dropsHtml}
                     </div>
@@ -2981,7 +2939,7 @@
                 const availableTargets = shopItems.filter(i => i.price >= minPrice);
 
                 if (availableTargets.length === 0) {
-                    list.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px;">Нет подходящих предметов дороже на 30%. Выберите другой предмет или купите в магазине!</div>`;
+                    list.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px;">Нет доступных целей для апгрейда. Выберите другой предмет!</div>`;
                 } else {
                     availableTargets.forEach(item => {
                         const row = document.createElement('div');
