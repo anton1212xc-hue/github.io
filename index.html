@@ -120,6 +120,7 @@
         .game-banner:active { transform: scale(0.98); }
 
         .game-banner.cases { background: linear-gradient(135deg, #b45309, #78350f); border-color: #d97706; }
+        .game-banner.eggs { background: linear-gradient(135deg, #047857, #064e3b); border-color: #10b981; }
         .game-banner.upgrade { background: linear-gradient(135deg, #4f228b, #251447); border-color: #6d28d9; }
         .game-banner.plane { background: linear-gradient(135deg, #881337, #4c0519); border-color: #be123c; }
         .game-banner.mines { background: linear-gradient(135deg, #7f1d1d, #450a0a); border-color: #ef4444; }
@@ -242,6 +243,62 @@
             justify-content: center;
             padding: 3px;
             text-align: center;
+        }
+
+        /* EGGS GAME STYLES */
+        .eggs-lobby {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+            max-width: 360px;
+        }
+        .egg-mode-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .egg-mode-card:active { transform: scale(0.98); }
+        .egg-arena {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            margin: 20px 0;
+            width: 100%;
+            max-width: 340px;
+        }
+        .egg-item {
+            width: 90px;
+            height: 110px;
+            background: var(--card-bg);
+            border: 2px solid var(--card-border);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 42px;
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.2s;
+        }
+        .egg-item:hover { border-color: var(--accent); }
+        .egg-item.crack {
+            animation: shake 0.3s ease-in-out infinite;
+            border-color: var(--danger);
+        }
+        @keyframes shake {
+            0% { transform: rotate(0deg); }
+            25% { transform: rotate(-5deg); }
+            75% { transform: rotate(5deg); }
+            100% { transform: rotate(0deg); }
         }
 
         /* UPGRADE MODULE STYLES */
@@ -699,6 +756,14 @@
                     <div class="game-icon">📦</div>
                 </div>
 
+                <div class="game-banner eggs" onclick="openGame('eggs')">
+                    <div>
+                        <div class="game-title">Яйца</div>
+                        <div class="game-desc">Выбирайте 3 или 5 яиц, разбивайте и забирайте призы</div>
+                    </div>
+                    <div class="game-icon">🥚</div>
+                </div>
+
                 <div class="game-banner upgrade" onclick="openGame('upgrade')">
                     <div>
                         <div class="game-title">Апгрейд</div>
@@ -856,7 +921,7 @@
             }
         };
 
-        let adminActionType = 'add'; // 'add' или 'take'
+        let adminActionType = 'add';
 
         const shopItems = [
             { id: 1, name: "Роза", price: 25, icon: "🌹", isImg: false },
@@ -1169,6 +1234,8 @@
             const body = document.getElementById('gameContentBody');
             if (type === 'cases') {
                 renderCasesLobby(body);
+            } else if (type === 'eggs') {
+                renderEggsLobby(body);
             } else if (type === 'upgrade') {
                 renderUpgradeScreen(body);
             } else if (type === 'plane') {
@@ -1181,10 +1248,153 @@
         }
 
         function closeGame() {
-            if (planeState.isPlaying || minesState.isPlaying || cupsState.isShuffling) return;
+            if (planeState.isPlaying || minesState.isPlaying || cupsState.isShuffling || eggsState.isOpening) return;
             document.getElementById('game-screen-container').classList.remove('active');
             document.getElementById('tab-games').classList.add('active');
             document.querySelector('.nav-bar').style.display = 'flex';
+        }
+
+        // --- EGGS GAME LOGIC ---
+        let eggsState = {
+            count: 3,
+            price: 500,
+            isOpening: false,
+            prizes: []
+        };
+
+        function renderEggsLobby(container) {
+            container.innerHTML = `
+                <div class="eggs-lobby">
+                    <div style="font-size: 16px; font-weight: 800; margin-bottom: 4px;">Выберите режим игры «Яйца»</div>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Разбивайте яйца и получайте ценные призы!</div>
+
+                    <div class="egg-mode-card" onclick="startEggsSession(3, 500)">
+                        <div>
+                            <div style="font-size: 16px; font-weight: 800; margin-bottom: 3px;">🐣 3 Яйца</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">Призы до 1 000 ⭐</div>
+                        </div>
+                        <div style="font-size: 15px; font-weight: 800; color: var(--accent);">⭐ 500</div>
+                    </div>
+
+                    <div class="egg-mode-card" onclick="startEggsSession(5, 750)" style="background: linear-gradient(135deg, #1b2838, #111722); border-color: #f59e0b;">
+                        <div>
+                            <div style="font-size: 16px; font-weight: 800; margin-bottom: 3px;">🐲 5 Яйц (Элитные)</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">Призы до 1 500 ⭐ (редкий окуп)</div>
+                        </div>
+                        <div style="font-size: 15px; font-weight: 800; color: var(--accent);">⭐ 750</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function startEggsSession(count, price) {
+            if (state.balance < price) {
+                alert("Недостаточно звёзд на балансе!");
+                return;
+            }
+
+            state.balance -= price;
+            updateUI();
+            saveCloud();
+
+            eggsState.count = count;
+            eggsState.price = price;
+            eggsState.isOpening = false;
+            eggsState.prizes = [];
+
+            // Генерация призов для каждого яйца
+            let maxLimit = count === 3 ? 1000 : 1500;
+            let availableShopItems = shopItems.filter(i => i.price <= maxLimit);
+
+            for (let i = 0; i < count; i++) {
+                let rand = Math.random() * 100;
+                if (rand < 65) {
+                    // Звёзды на баланс
+                    let starAmount = Math.floor(Math.random() * (maxLimit * 0.4)) + 10;
+                    eggsState.prizes.push({ type: 'stars', name: `${starAmount} звёзд`, amount: starAmount, price: starAmount, icon: '⭐' });
+                } else if (rand < 92 && availableShopItems.length > 0) {
+                    // Дешевый предмет из магазина
+                    let randomItem = availableShopItems[Math.floor(Math.random() * availableShopItems.length)];
+                    eggsState.prizes.push({ type: 'item', name: randomItem.name, price: randomItem.price, icon: randomItem.icon, isImg: randomItem.isImg });
+                } else {
+                    // Редкий дорогой приз
+                    let rareItems = shopItems.filter(i => i.price <= maxLimit && i.price >= maxLimit * 0.6);
+                    if (rareItems.length > 0) {
+                        let rareItem = rareItems[Math.floor(Math.random() * rareItems.length)];
+                        eggsState.prizes.push({ type: 'item', name: rareItem.name, price: rareItem.price, icon: rareItem.icon, isImg: rareItem.isImg });
+                    } else {
+                        let starAmount = Math.floor(Math.random() * (maxLimit * 0.8)) + 100;
+                        eggsState.prizes.push({ type: 'stars', name: `${starAmount} звёзд`, amount: starAmount, price: starAmount, icon: '⭐' });
+                    }
+                }
+            }
+
+            renderEggsArena();
+        }
+
+        function renderEggsArena() {
+            const body = document.getElementById('gameContentBody');
+            let eggsHtml = '';
+            for (let i = 0; i < eggsState.count; i++) {
+                eggsHtml += `
+                    <div class="egg-item" id="egg_${i}" onclick="crackEgg(${i})">
+                        🥚
+                    </div>
+                `;
+            }
+
+            body.innerHTML = `
+                <div style="width: 100%; max-width: 360px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                    <div style="font-size: 16px; font-weight: 800;">Выберите яйцо для разбития 🔨</div>
+                    <div style="font-size: 12px; color: var(--text-muted); text-align: center;">Кликните на любое яйцо, чтобы ударить молоточком и узнать приз!</div>
+                    <div class="egg-arena">
+                        ${eggsHtml}
+                    </div>
+                    <button class="back-btn" onclick="openGame('eggs')" style="margin-top:10px;">← К выбору режима</button>
+                </div>
+            `;
+        }
+
+        async function crackEgg(index) {
+            if (eggsState.isOpening) return;
+            eggsState.isOpening = true;
+
+            const eggEl = document.getElementById(`egg_${index}`);
+            eggEl.classList.add('crack');
+            eggEl.innerText = '🔨🥚';
+
+            await new Promise(r => setTimeout(r, 1200));
+
+            const prize = eggsState.prizes[index];
+            if (prize.type === 'stars') {
+                state.balance += prize.amount;
+                eggEl.innerText = '⭐';
+            } else {
+                state.inventory.push({ name: prize.name, price: prize.price, icon: prize.icon, isImg: prize.isImg, uid: Date.now() + Math.random() });
+                eggEl.innerText = prize.icon;
+            }
+
+            updateUI();
+            await saveCloud();
+
+            // Показать остальные яйца
+            for (let i = 0; i < eggsState.count; i++) {
+                if (i !== index) {
+                    const otherEl = document.getElementById(`egg_${i}`);
+                    otherEl.style.opacity = '0.5';
+                    otherEl.style.pointerEvents = 'none';
+                    let otherPrize = eggsState.prizes[i];
+                    otherEl.innerText = otherPrize.icon;
+                }
+            }
+
+            eggEl.classList.remove('crack');
+            eggEl.style.borderColor = 'var(--success)';
+
+            setTimeout(() => {
+                alert(`🎉 Поздравляем! Вы выиграли: ${prize.name} (${prize.price} ⭐)`);
+                eggsState.isOpening = false;
+            }, 300);
         }
 
         function renderCasesLobby(container) {
