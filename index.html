@@ -539,7 +539,7 @@
             font-weight: 700;
         }
 
-        /* CUPS GAME STYLES */
+        /* CUPS GAME STYLES WITH REAL ANIMATED SLIDING */
         .cups-container {
             display: flex;
             flex-direction: column;
@@ -570,8 +570,9 @@
             justify-content: center;
             font-size: 36px;
             cursor: pointer;
-            position: relative;
-            transition: transform 0.25s ease, border-color 0.2s, left 0.3s ease;
+            position: absolute;
+            top: 0;
+            transition: transform 0.2s ease, border-color 0.2s, left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
         }
         .cup-item:hover { border-color: var(--accent); }
         .cup-item.lifted {
@@ -792,8 +793,8 @@
 
                 <div class="game-banner cups" onclick="openGame('cups')">
                     <div>
-                        <div class="game-title">Стаканчики (Hard)</div>
-                        <div class="game-desc">Усложненная угадайка с динамическим перемешиванием</div>
+                        <div class="game-title">Стаканчики (С анимацией)</div>
+                        <div class="game-desc">Следите за реальным движением стаканов</div>
                     </div>
                     <div class="game-icon">🥛</div>
                 </div>
@@ -1742,32 +1743,35 @@
             }, 100);
         }
 
-        // --- CUPS GAME LOGIC (HARDCORE VERSION) ---
+        // --- CUPS GAME LOGIC (WITH REAL CSS SLIDING ANIMATION) ---
         let cupsState = {
             bet: 50,
-            difficulty: 'hard', // По умолчанию усложненный режим
+            difficulty: 'hard',
             winningCup: 0,
             isShuffling: false,
             roundReady: false,
             gameOver: false,
             revealedCup: null,
-            cupPositions: [0, 1, 2], // Текущий физический порядок стаканчиков (0, 1, 2)
+            cupPositions: [0, 1, 2], // Физические слоты стаканчиков на экране: индексы исходных стаканов
             streak: 0
         };
+
+        const cupLeftPixels = ["0px", "97px", "194px"]; // Координаты X для 3 стаканчиков
 
         function renderCupsScreen(container) {
             const baseMult = cupsState.difficulty === 'easy' ? 1.5 : 2.5;
             const currentMult = parseFloat((baseMult + cupsState.streak * 0.25).toFixed(2));
 
-            // Рендерим стаканчики согласно их текущим позициям в массиве cupPositions
             let cupsHtml = '';
+            // Рендерим стаканы в абсолютных позициях для плавного CSS перемещения
             cupsState.cupPositions.forEach((originalIndex, slotIndex) => {
                 let content = '🥛';
                 if (cupsState.gameOver && cupsState.revealedCup === slotIndex) {
                     content = (originalIndex === cupsState.winningCup) ? '💎' : '❌';
                 }
+                const leftPos = cupLeftPixels[slotIndex];
                 cupsHtml += `
-                    <div class="cup-item" id="cup_slot_${slotIndex}" onclick="chooseCup(${slotIndex})" style="order: ${slotIndex};">
+                    <div class="cup-item" id="cup_item_${originalIndex}" onclick="chooseCup(${slotIndex})" style="left: ${leftPos};">
                         ${content}
                     </div>
                 `;
@@ -1775,12 +1779,12 @@
 
             container.innerHTML = `
                 <div class="cups-container">
-                    <div style="font-size: 15px; font-weight: 800;">🥛 Стаканчики (Hard Mode)</div>
+                    <div style="font-size: 15px; font-weight: 800;">🥛 Стаканчики (Анимация движения)</div>
                     <div style="font-size: 11px; color: var(--text-muted); text-align: center;">
-                        Множитель: <strong style="color:var(--accent);">${currentMult}x</strong> ${cupsState.streak > 0 ? `(Стрик побед: x${cupsState.streak})` : ''}
+                        Множитель: <strong style="color:var(--accent);">${currentMult}x</strong> ${cupsState.streak > 0 ? `(Стрик: x${cupsState.streak})` : ''}
                     </div>
 
-                    <div class="cups-row" id="cupsRow" style="display: flex; gap: 12px; justify-content: center;">
+                    <div class="cups-row" id="cupsRow" style="width: 279px; height: 105px; position: relative; margin: 20px auto;">
                         ${cupsHtml}
                     </div>
 
@@ -1853,38 +1857,38 @@
 
             renderCupsScreen(document.getElementById('gameContentBody'));
 
-            // Анимация показа где находится бриллиант перед стартом (усложнение: держится всего 0.6 сек!)
-            const slotWithDiamond = cupsState.cupPositions.indexOf(cupsState.winningCup);
-            const initialCupEl = document.getElementById(`cup_slot_${slotWithDiamond}`);
+            // 1. Показываем где приз в начале (поднимаем нужный стакан)
+            const initialSlot = cupsState.cupPositions.indexOf(cupsState.winningCup);
+            const initialCupEl = document.getElementById(`cup_item_${cupsState.winningCup}`);
             if (initialCupEl) {
                 initialCupEl.classList.add('lifted');
                 initialCupEl.innerText = '💎';
             }
-            await new Promise(r => setTimeout(r, 650));
+            await new Promise(r => setTimeout(r, 700));
             if (initialCupEl) {
                 initialCupEl.classList.remove('lifted');
                 initialCupEl.innerText = '🥛';
             }
-            await new Promise(r => setTimeout(r, 300));
+            await new Promise(r => setTimeout(r, 350));
 
-            // Усложненный процесс перемешивания (больше шагов, высокая скорость на Hard)
-            const speed = cupsState.difficulty === 'easy' ? 180 : 85;
-            const shuffles = cupsState.difficulty === 'easy' ? 8 : 16;
+            // 2. Реальное перемешивание со скольжением стаканов на экране
+            const speed = cupsState.difficulty === 'easy' ? 320 : 200;
+            const shuffles = cupsState.difficulty === 'easy' ? 6 : 12;
 
             for (let i = 0; i < shuffles; i++) {
                 soundFX.click();
-                // Меняем местами два случайных стаканчика в массиве позиций
                 let idxA = Math.floor(Math.random() * 3);
                 let idxB = Math.floor(Math.random() * 3);
                 while(idxA === idxB) {
                     idxB = Math.floor(Math.random() * 3);
                 }
 
-                // Свап
+                // Меняем местами стаканы в массиве позиций
                 let temp = cupsState.cupPositions[idxA];
                 cupsState.cupPositions[idxA] = cupsState.cupPositions[idxB];
                 cupsState.cupPositions[idxB] = temp;
 
+                // Перерисовываем, благодаря чему CSS свойство left плавно сдвигает стаканчики в новые позиции
                 renderCupsScreen(document.getElementById('gameContentBody'));
                 await new Promise(r => setTimeout(r, speed));
             }
@@ -1921,7 +1925,7 @@
                 setTimeout(() => alert(`🎉 Блестяще! Вы угадали стаканчик и выиграли ${winAmount} ⭐ (${currentMult}x)!`), 150);
             } else {
                 await saveCloud();
-                cupsState.streak = 0; // Сброс стрика при ошибке
+                cupsState.streak = 0;
                 setTimeout(() => alert(`😢 Ошибка! Бриллиант был под другим стаканом. Ставка сгорела.`), 150);
             }
         }
