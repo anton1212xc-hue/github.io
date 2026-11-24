@@ -893,6 +893,9 @@
             { id: 40, name: "Instant Pamen", price: 400, icon: "🍜", isImg: false }
         ];
 
+        // Сортируем магазин по возрастанию цены от маленькой к высокой
+        shopItems.sort((a, b) => a.price - b.price);
+
         const casesList = [
             {
                 id: 'bear',
@@ -900,16 +903,21 @@
                 price: 149,
                 emojiIcon: '🧸',
                 drops: [
-                    { name: "5 звёзд", type: "stars", amount: 5, chance: 82.0, icon: "⭐" },
-                    { name: "Статуя", type: "item", price: 500, chance: 9.0, icon: "🗽", isImg: false },
-                    { name: "Шляпа", type: "item", price: 750, chance: 1.5, icon: "🎩", isImg: false },
-                    { name: "Fine pen", type: "item", price: 670, chance: 2.5, icon: "🖊️", isImg: false },
-                    { name: "Instant Pamen", type: "item", price: 400, chance: 1.0, icon: "🍜", isImg: false },
-                    { name: "Mirage Lamp", type: "item", price: 460, chance: 2.0, icon: "🏮", isImg: false },
-                    { name: "Ice cream", type: "item", price: 410, chance: 2.0, icon: "🍦", isImg: false }
+                    { name: "5 звёзд", type: "stars", amount: 5, chance: 85.0, icon: "⭐", price: 5 },
+                    { name: "Instant Pamen", type: "item", price: 400, chance: 3.0, icon: "🍜", isImg: false },
+                    { name: "Ice cream", type: "item", price: 410, chance: 2.5, icon: "🍦", isImg: false },
+                    { name: "Mirage Lamp", type: "item", price: 460, chance: 2.5, icon: "🏮", isImg: false },
+                    { name: "Статуя", type: "item", price: 500, chance: 3.0, icon: "🗽", isImg: false },
+                    { name: "Fine pen", type: "item", price: 670, chance: 2.0, icon: "🖊️", isImg: false },
+                    { name: "Шляпа", type: "item", price: 750, chance: 2.0, icon: "🎩", isImg: false }
                 ]
             }
         ];
+
+        // Сортируем содержимое кейса по возрастанию цены
+        casesList.forEach(c => {
+            c.drops.sort((a, b) => a.price - b.price);
+        });
 
         async function loadGame() {
             try {
@@ -988,6 +996,9 @@
         function renderInventory() {
             const grid = document.getElementById('inventoryGrid');
             const sellAllBtn = document.getElementById('sellAllBtn');
+
+            // Сортируем инвентарь по цене от меньшей к большей
+            state.inventory.sort((a, b) => a.price - b.price);
 
             if (state.inventory.length === 0) {
                 sellAllBtn.style.display = 'none';
@@ -1142,7 +1153,7 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 10px; font-size: 12px;">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="font-size: 18px;">${d.icon}</span>
-                            <span style="font-weight: 700;">${d.name}</span>
+                            <span style="font-weight: 700;">${d.name} (${d.price} ⭐)</span>
                         </div>
                         <span style="color: var(--accent); font-weight: 700;">${d.chance}%</span>
                     </div>
@@ -1155,7 +1166,7 @@
                     <div style="font-size: 18px; font-weight: 800;">Кейс ${caseObj.name}</div>
                     <div style="font-size: 13px; color: var(--text-muted);">Цена за 1 шт: <strong style="color:var(--accent);">${caseObj.price} ⭐</strong></div>
 
-                    <div style="width: 100%; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted);">Содержимое и шансы:</div>
+                    <div style="width: 100%; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted);">Содержимое (от дешевых к дорогим) и шансы:</div>
                     <div style="width: 100%; max-height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
                         ${dropsHtml}
                     </div>
@@ -1766,7 +1777,9 @@
         function calculateChance() {
             if (!upgradeState.sourceItem || !upgradeState.targetItem) return 50;
             let ch = (upgradeState.sourceItem.price / upgradeState.targetItem.price) * 100;
-            return Math.min(95, Math.max(5, Math.round(ch)));
+            // Уменьшаем шансы (делаем сложнее примерно на 15-20%)
+            let adjustedCh = ch * 0.82;
+            return Math.min(90, Math.max(3, Math.round(adjustedCh)));
         }
 
         function renderUpgradeScreen(container) {
@@ -1831,6 +1844,7 @@
                 if (state.inventory.length === 0) {
                     list.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px;">Инвентарь пуст. Купите что-то в магазине!</div>`;
                 } else {
+                    // Инвентарь уже отсортирован
                     state.inventory.forEach((item, index) => {
                         const row = document.createElement('div');
                         row.className = 'modal-item-row';
