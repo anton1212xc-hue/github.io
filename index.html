@@ -539,7 +539,7 @@
             font-weight: 700;
         }
 
-        /* CUPS GAME STYLES WITH REAL ANIMATED SLIDING */
+        /* CUPS GAME STYLES */
         .cups-container {
             display: flex;
             flex-direction: column;
@@ -1430,7 +1430,8 @@
             count: 3,
             price: 500,
             isOpening: false,
-            prizes: []
+            prizes: [],
+            dropSource: 'standard' // 'standard' или 'bear_drops'
         };
 
         function renderEggsLobby(container) {
@@ -1439,7 +1440,7 @@
                     <div style="font-size: 16px; font-weight: 800; margin-bottom: 4px;">Выберите режим игры «Яйца»</div>
                     <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Разбивайте яйца молоточком и получайте призы!</div>
 
-                    <div class="egg-mode-card" onclick="startEggsSession(3, 500)">
+                    <div class="egg-mode-card" onclick="startEggsSession(3, 500, 'standard')">
                         <div>
                             <div style="font-size: 16px; font-weight: 800; margin-bottom: 3px;">🐣 3 Яйца</div>
                             <div style="font-size: 12px; color: var(--text-muted);">Призы до 1 000 ⭐</div>
@@ -1447,7 +1448,16 @@
                         <div style="font-size: 15px; font-weight: 800; color: var(--accent);">⭐ 500</div>
                     </div>
 
-                    <div class="egg-mode-card" onclick="startEggsSession(5, 750)" style="background: linear-gradient(135deg, #1b2838, #111722); border-color: #f59e0b;">
+                    <!-- НОВОЕ ЯЙЦО ПО ВАШЕМУ ЗАПРОСУ -->
+                    <div class="egg-mode-card" onclick="startEggsSession(3, 250, 'bear_drops')" style="background: linear-gradient(135deg, #78350f, #451a03); border-color: #f59e0b;">
+                        <div>
+                            <div style="font-size: 16px; font-weight: 800; margin-bottom: 3px;">🧸 Медвежье Яйцо</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">Открываешь одно, а внутри 3 яйца! Дроп как в кейсе Bear</div>
+                        </div>
+                        <div style="font-size: 15px; font-weight: 800; color: var(--accent);">⭐ 250</div>
+                    </div>
+
+                    <div class="egg-mode-card" onclick="startEggsSession(5, 750, 'standard')" style="background: linear-gradient(135deg, #1b2838, #111722); border-color: #f59e0b;">
                         <div>
                             <div style="font-size: 16px; font-weight: 800; margin-bottom: 3px;">🐲 5 Яйц (Элитные)</div>
                             <div style="font-size: 12px; color: var(--text-muted);">Призы до 1 500 ⭐ (редкий окуп)</div>
@@ -1458,7 +1468,7 @@
             `;
         }
 
-        function startEggsSession(count, price) {
+        function startEggsSession(count, price, dropSource = 'standard') {
             if (state.balance < price) {
                 alert("Недостаточно звёзд на балансе!");
                 return;
@@ -1472,26 +1482,40 @@
             eggsState.price = price;
             eggsState.isOpening = false;
             eggsState.prizes = [];
+            eggsState.dropSource = dropSource;
 
-            let maxLimit = count === 3 ? 1000 : 1500;
-            let availableShopItems = shopItems.filter(i => i.price <= maxLimit);
-
-            for (let i = 0; i < count; i++) {
-                let rand = Math.random() * 100;
-                if (rand < 65) {
-                    let starAmount = Math.floor(Math.random() * (maxLimit * 0.4)) + 10;
-                    eggsState.prizes.push({ type: 'stars', name: `${starAmount} звёзд`, amount: starAmount, price: starAmount, icon: '⭐' });
-                } else if (rand < 92 && availableShopItems.length > 0) {
-                    let randomItem = availableShopItems[Math.floor(Math.random() * availableShopItems.length)];
-                    eggsState.prizes.push({ type: 'item', name: randomItem.name, price: randomItem.price, icon: randomItem.icon, isImg: randomItem.isImg });
-                } else {
-                    let rareItems = shopItems.filter(i => i.price <= maxLimit && i.price >= maxLimit * 0.6);
-                    if (rareItems.length > 0) {
-                        let rareItem = rareItems[Math.floor(Math.random() * rareItems.length)];
-                        eggsState.prizes.push({ type: 'item', name: rareItem.name, price: rareItem.price, icon: rareItem.icon, isImg: rareItem.isImg });
+            if (dropSource === 'bear_drops') {
+                // Дроп и точные шансы как в кейсе Bear за 150
+                const bearDrops = casesList.find(c => c.id === 'bear').drops;
+                for (let i = 0; i < 3; i++) {
+                    let d = rollDrop(bearDrops);
+                    if (d.type === 'stars') {
+                        eggsState.prizes.push({ type: 'stars', name: d.name, amount: d.amount, price: d.price, icon: d.icon });
                     } else {
-                        let starAmount = Math.floor(Math.random() * (maxLimit * 0.8)) + 100;
+                        eggsState.prizes.push({ type: 'item', name: d.name, price: d.price, icon: d.icon, isImg: d.isImg });
+                    }
+                }
+            } else {
+                let maxLimit = count === 3 ? 1000 : 1500;
+                let availableShopItems = shopItems.filter(i => i.price <= maxLimit);
+
+                for (let i = 0; i < count; i++) {
+                    let rand = Math.random() * 100;
+                    if (rand < 65) {
+                        let starAmount = Math.floor(Math.random() * (maxLimit * 0.4)) + 10;
                         eggsState.prizes.push({ type: 'stars', name: `${starAmount} звёзд`, amount: starAmount, price: starAmount, icon: '⭐' });
+                    } else if (rand < 92 && availableShopItems.length > 0) {
+                        let randomItem = availableShopItems[Math.floor(Math.random() * availableShopItems.length)];
+                        eggsState.prizes.push({ type: 'item', name: randomItem.name, price: randomItem.price, icon: randomItem.icon, isImg: randomItem.isImg });
+                    } else {
+                        let rareItems = shopItems.filter(i => i.price <= maxLimit && i.price >= maxLimit * 0.6);
+                        if (rareItems.length > 0) {
+                            let rareItem = rareItems[Math.floor(Math.random() * rareItems.length)];
+                            eggsState.prizes.push({ type: 'item', name: rareItem.name, price: rareItem.price, icon: rareItem.icon, isImg: rareItem.isImg });
+                        } else {
+                            let starAmount = Math.floor(Math.random() * (maxLimit * 0.8)) + 100;
+                            eggsState.prizes.push({ type: 'stars', name: `${starAmount} звёзд`, amount: starAmount, price: starAmount, icon: '⭐' });
+                        }
                     }
                 }
             }
@@ -1743,7 +1767,7 @@
             }, 100);
         }
 
-        // --- CUPS GAME LOGIC (WITH REAL CSS SLIDING ANIMATION) ---
+        // --- CUPS GAME LOGIC ---
         let cupsState = {
             bet: 50,
             difficulty: 'hard',
@@ -1752,18 +1776,17 @@
             roundReady: false,
             gameOver: false,
             revealedCup: null,
-            cupPositions: [0, 1, 2], // Физические слоты стаканчиков на экране: индексы исходных стаканов
+            cupPositions: [0, 1, 2],
             streak: 0
         };
 
-        const cupLeftPixels = ["0px", "97px", "194px"]; // Координаты X для 3 стаканчиков
+        const cupLeftPixels = ["0px", "97px", "194px"];
 
         function renderCupsScreen(container) {
             const baseMult = cupsState.difficulty === 'easy' ? 1.5 : 2.5;
             const currentMult = parseFloat((baseMult + cupsState.streak * 0.25).toFixed(2));
 
             let cupsHtml = '';
-            // Рендерим стаканы в абсолютных позициях для плавного CSS перемещения
             cupsState.cupPositions.forEach((originalIndex, slotIndex) => {
                 let content = '🥛';
                 if (cupsState.gameOver && cupsState.revealedCup === slotIndex) {
@@ -1857,8 +1880,6 @@
 
             renderCupsScreen(document.getElementById('gameContentBody'));
 
-            // 1. Показываем где приз в начале (поднимаем нужный стакан)
-            const initialSlot = cupsState.cupPositions.indexOf(cupsState.winningCup);
             const initialCupEl = document.getElementById(`cup_item_${cupsState.winningCup}`);
             if (initialCupEl) {
                 initialCupEl.classList.add('lifted');
@@ -1871,7 +1892,6 @@
             }
             await new Promise(r => setTimeout(r, 350));
 
-            // 2. Реальное перемешивание со скольжением стаканов на экране
             const speed = cupsState.difficulty === 'easy' ? 320 : 200;
             const shuffles = cupsState.difficulty === 'easy' ? 6 : 12;
 
@@ -1883,12 +1903,10 @@
                     idxB = Math.floor(Math.random() * 3);
                 }
 
-                // Меняем местами стаканы в массиве позиций
                 let temp = cupsState.cupPositions[idxA];
                 cupsState.cupPositions[idxA] = cupsState.cupPositions[idxB];
                 cupsState.cupPositions[idxB] = temp;
 
-                // Перерисовываем, благодаря чему CSS свойство left плавно сдвигает стаканчики в новые позиции
                 renderCupsScreen(document.getElementById('gameContentBody'));
                 await new Promise(r => setTimeout(r, speed));
             }
