@@ -281,7 +281,6 @@
             color: #fff;
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
-        /* Стрелочка расположена снаружи круга сверху и острой стороной указывает в центр */
         .pvp-wheel-needle {
             position: absolute;
             top: -26px;
@@ -299,7 +298,7 @@
             width: 0; height: 0;
             border-left: 9px solid transparent;
             border-right: 9px solid transparent;
-            border-top: 30px solid #ffffff; /* Треугольник острием вниз к кругу */
+            border-top: 30px solid #ffffff;
         }
         .pvp-wheel-box-rotatable {
             width: 100%;
@@ -2147,7 +2146,7 @@
             updateUI();
             await saveCloud();
 
-            // 1. СТРОГО фиксируем выпавшие призы ДО начала отрисовки рулетки
+            // Генерируем выигранные предметы строго 1 раз ДО запуска анимации
             let wonDrops = [];
             for (let i = 0; i < count; i++) {
                 wonDrops.push(rollDrop(caseObj.drops));
@@ -2161,7 +2160,7 @@
                 for (let j = 0; j < 35; j++) {
                     rouletteItems.push(rollDrop(caseObj.drops));
                 }
-                // 2. Жестко ставим именно выигранный предмет на позицию 28, куда указывает стрелка
+                // Размещаем точно этот выигранный предмет на позиции 28 (под стрелочку)
                 let winningIndex = 28;
                 rouletteItems[winningIndex] = wonDrops[i];
 
@@ -2219,7 +2218,7 @@
                     soundFX.win();
                     let wonItemsSummary = [];
                     
-                    // 3. Выдаем игроку точно те же призы, что крутились и остановились в рулетке
+                    // Начисляем игроку строго то, что выпало на рулетках (массив wonDrops)
                     for (let drop of wonDrops) {
                         if (drop.type === 'stars') {
                             state.balance += drop.amount;
