@@ -119,6 +119,7 @@
         }
         .game-banner:active { transform: scale(0.98); }
 
+        .game-banner.cases { background: linear-gradient(135deg, #b45309, #78350f); border-color: #d97706; }
         .game-banner.upgrade { background: linear-gradient(135deg, #4f228b, #251447); border-color: #6d28d9; }
         .game-banner.plane { background: linear-gradient(135deg, #881337, #4c0519); border-color: #be123c; }
         .game-banner.mines { background: linear-gradient(135deg, #7f1d1d, #450a0a); border-color: #ef4444; }
@@ -611,6 +612,14 @@
         <div id="tab-games" class="tab-content active">
             <div class="section-title">Игровой зал</div>
             <div class="games-grid">
+                <div class="game-banner cases" onclick="openGame('cases')">
+                    <div>
+                        <div class="game-title">Кейсы</div>
+                        <div class="game-desc">Открывайте кейсы и выигрывайте призы</div>
+                    </div>
+                    <div class="game-icon">📦</div>
+                </div>
+
                 <div class="game-banner upgrade" onclick="openGame('upgrade')">
                     <div>
                         <div class="game-title">Апгрейд</div>
@@ -940,7 +949,7 @@
             }
         }
 
-        // WORKABLE MINI GAMES LOGIC
+        // WORKABLE MINI GAMES & CASES LOGIC
         function openGame(type) {
             document.querySelectorAll('.tab-content').forEach(e => e.classList.remove('active'));
             document.querySelector('.nav-bar').style.display = 'none';
@@ -948,7 +957,9 @@
             screen.classList.add('active');
 
             const body = document.getElementById('gameContentBody');
-            if (type === 'upgrade') {
+            if (type === 'cases') {
+                renderCasesScreen(body);
+            } else if (type === 'upgrade') {
                 renderUpgradeScreen(body);
             } else if (type === 'plane') {
                 renderPlaneScreen(body);
@@ -964,6 +975,19 @@
             document.getElementById('game-screen-container').classList.remove('active');
             document.getElementById('tab-games').classList.add('active');
             document.querySelector('.nav-bar').style.display = 'flex';
+        }
+
+        // --- CASES SCREEN (ПУСТОЙ РАЗДЕЛ ДЛЯ ДОБАВЛЕНИЯ) ---
+        function renderCasesScreen(container) {
+            container.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 20px;">
+                    <div style="font-size: 45px;">📦</div>
+                    <div style="font-size: 18px; font-weight: 800;">Меню кейсов</div>
+                    <div style="font-size: 13px; color: var(--text-muted); text-align: center; max-width: 280px;">
+                        Здесь скоро появятся кейсы. Напишите мне, какие кейсы и с какими призами вы хотите добавить!
+                    </div>
+                </div>
+            `;
         }
 
         // --- CUPS (СТАКАНЧИКИ) GAME LOGIC ---
