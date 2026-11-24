@@ -165,6 +165,32 @@
         .item-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
         .item-price { font-size: 12px; color: var(--accent); font-weight: 700; margin-bottom: 10px; }
 
+        /* CASES ROOM STYLES */
+        .cases-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        .case-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .case-card:active { transform: scale(0.97); }
+        .case-img {
+            width: 75px;
+            height: 75px;
+            object-fit: contain;
+            margin-bottom: 8px;
+        }
+
         /* UPGRADE MODULE STYLES */
         .upgrade-container {
             display: flex;
@@ -790,7 +816,7 @@
             { id: 18, name: "Частный Самолет", price: 35000, icon: "✈️", isImg: false },
             { id: 19, name: "Космическая Ракета", price: 50000, icon: "🚀", isImg: false },
             
-            // Новые добавленные предметы
+            // Новые предметы
             { id: 20, name: "Статуя", price: 500, icon: "🗽", isImg: false },
             { id: 21, name: "Факел", price: 350, icon: "🔦", isImg: false },
             { id: 22, name: "х2 кольцо", price: 200, icon: "💍", isImg: false },
@@ -812,6 +838,25 @@
             { id: 38, name: "Vintage Cigar", price: 3500, icon: "🚬", isImg: false },
             { id: 39, name: "Durov's Glasses", price: 11000, icon: "🕶️", isImg: false },
             { id: 40, name: "Instant Pamen", price: 400, icon: "🍜", isImg: false }
+        ];
+
+        // Список кейсов
+        const casesList = [
+            {
+                id: 'bear',
+                name: 'Bear',
+                price: 149,
+                image: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=' , // Аватарка Bear кейса
+                drops: [
+                    { name: "5 звёзд", type: "stars", amount: 5, chance: 75, icon: "⭐" },
+                    { name: "Статуя", type: "item", price: 500, chance: 5, icon: "🗽", isImg: false },
+                    { name: "Шляпа", type: "item", price: 750, chance: 1, icon: "🎩", isImg: false },
+                    { name: "Fine pen", type: "item", price: 670, chance: 3, icon: "🖊️", isImg: false },
+                    { name: "Instant Pamen", type: "item", price: 400, chance: 6, icon: "🍜", isImg: false },
+                    { name: "Mirage Lamp", type: "item", price: 460, chance: 5, icon: "🏮", isImg: false },
+                    { name: "Ice cream", type: "item", price: 410, chance: 5, icon: "🍦", isImg: false }
+                ]
+            }
         ];
 
         async function loadGame() {
@@ -972,7 +1017,7 @@
             }
         }
 
-        // WORKABLE MINI GAMES & CASES LOGIC
+        // GAMES & CASES
         function openGame(type) {
             document.querySelectorAll('.tab-content').forEach(e => e.classList.remove('active'));
             document.querySelector('.nav-bar').style.display = 'none';
@@ -981,7 +1026,7 @@
 
             const body = document.getElementById('gameContentBody');
             if (type === 'cases') {
-                renderCasesScreen(body);
+                renderCasesLobby(body);
             } else if (type === 'upgrade') {
                 renderUpgradeScreen(body);
             } else if (type === 'plane') {
@@ -1000,20 +1045,118 @@
             document.querySelector('.nav-bar').style.display = 'flex';
         }
 
-        // --- CASES SCREEN (ПУСТОЙ РАЗДЕЛ ДЛЯ ДОБАВЛЕНИЯ) ---
-        function renderCasesScreen(container) {
+        // --- CASES LOBBY & OPENING ---
+        function renderCasesLobby(container) {
+            let casesHtml = '';
+            casesList.forEach(c => {
+                casesHtml += `
+                    <div class="case-card" onclick="openCaseModal('${c.id}')">
+                        <img src="https://i.ibb.co/3ykG8v0K/179702.jpg" class="case-img" alt="${c.name}">
+                        <div style="font-size: 14px; font-weight: 800; margin-bottom: 2px;">${c.name}</div>
+                        <div style="font-size: 12px; color: var(--accent); font-weight: 700;">⭐ ${c.price}</div>
+                    </div>
+                `;
+            });
+
             container.innerHTML = `
-                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 20px;">
-                    <div style="font-size: 45px;">📦</div>
-                    <div style="font-size: 18px; font-weight: 800;">Меню кейсов</div>
-                    <div style="font-size: 13px; color: var(--text-muted); text-align: center; max-width: 280px;">
-                        Здесь скоро появятся кейсы. Напишите мне, какие кейсы и с какими призами вы хотите добавить!
+                <div style="width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 12px;">
+                    <div style="font-size: 16px; font-weight: 800; text-align: left;">Доступные кейсы</div>
+                    <div class="cases-grid">${casesHtml}</div>
+                </div>
+            `;
+        }
+
+        function openCaseModal(caseId) {
+            const caseObj = casesList.find(c => c.id === caseId);
+            const body = document.getElementById('gameContentBody');
+
+            let dropsHtml = '';
+            caseObj.drops.forEach(d => {
+                dropsHtml += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 10px; font-size: 12px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 18px;">${d.icon}</span>
+                            <span style="font-weight: 700;">${d.name}</span>
+                        </div>
+                        <span style="color: var(--accent); font-weight: 700;">${d.chance}%</span>
+                    </div>
+                `;
+            });
+
+            body.innerHTML = `
+                <div style="width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 14px;">
+                    <button class="back-btn" onclick="openGame('cases')" style="align-self: flex-start; margin-bottom: 0;">← К списку кейсов</button>
+                    <img src="https://i.ibb.co/3ykG8v0K/179702.jpg" style="width: 100px; height: 100px; object-fit: contain;" alt="${caseObj.name}">
+                    <div style="font-size: 18px; font-weight: 800;">Кейс ${caseObj.name}</div>
+                    <div style="font-size: 13px; color: var(--text-muted);">Цена за 1 шт: <strong style="color:var(--accent);">${caseObj.price} ⭐</strong></div>
+
+                    <div style="width: 100%; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted);">Содержимое и шансы:</div>
+                    <div style="width: 100%; max-height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
+                        ${dropsHtml}
+                    </div>
+
+                    <div style="display: flex; gap: 8px; width: 100%; margin-top: 10px;">
+                        <button class="btn" onclick="buyAndOpenCase('${caseObj.id}', 1)">Открыть 1 (⭐${caseObj.price})</button>
+                        <button class="btn" style="background:var(--success);" onclick="buyAndOpenCase('${caseObj.id}', 3)">Открыть 3 (⭐${caseObj.price * 3})</button>
+                        <button class="btn" style="background:var(--accent); color:#000;" onclick="buyAndOpenCase('${caseObj.id}', 5)">Открыть 5 (⭐${caseObj.price * 5})</button>
                     </div>
                 </div>
             `;
         }
 
-        // --- CUPS (СТАКАНЧИКИ) GAME LOGIC ---
+        function rollDrop(drops) {
+            let rand = Math.random() * 100;
+            let currentSum = 0;
+            for (let d of drops) {
+                currentSum += d.chance;
+                if (rand <= currentSum) return d;
+            }
+            return drops[0];
+        }
+
+        async function buyAndOpenCase(caseId, count) {
+            const caseObj = casesList.find(c => c.id === caseId);
+            const totalCost = caseObj.price * count;
+
+            if (state.balance < totalCost) {
+                alert("Недостаточно звёзд на балансе!");
+                return;
+            }
+
+            state.balance -= totalCost;
+            let wonItemsSummary = [];
+
+            for (let i = 0; i < count; i++) {
+                let drop = rollDrop(caseObj.drops);
+                if (drop.type === 'stars') {
+                    state.balance += drop.amount;
+                    wonItemsSummary.push(`⭐ ${drop.amount} звёзд`);
+                } else {
+                    let newItem = { name: drop.name, price: drop.price, icon: drop.icon, isImg: drop.isImg, uid: Date.now() + Math.random() + i };
+                    state.inventory.push(newItem);
+                    wonItemsSummary.push(`${drop.icon} ${drop.name} (${drop.price} ⭐)`);
+                }
+            }
+
+            updateUI();
+            await saveCloud();
+
+            const body = document.getElementById('gameContentBody');
+            let resultsHtml = wonItemsSummary.map(item => `<div style="background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:10px; font-weight:700; margin-bottom:5px;">${item}</div>`).join('');
+
+            body.innerHTML = `
+                <div style="width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 14px;">
+                    <div style="font-size: 20px; font-weight: 800; color: var(--accent);">🎉 Вы выиграли!</div>
+                    <div style="width: 100%; max-height: 250px; overflow-y: auto;">
+                        ${resultsHtml}
+                    </div>
+                    <button class="btn" onclick="openCaseModal('${caseObj.id}')">Открыть еще</button>
+                    <button class="btn" style="background:var(--card-border);" onclick="openGame('cases')">К списку кейсов</button>
+                </div>
+            `;
+        }
+
+        // --- CUPS GAME LOGIC ---
         let cupsState = {
             bet: 50,
             difficulty: 'easy',
