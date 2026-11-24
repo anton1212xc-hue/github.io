@@ -281,6 +281,7 @@
             color: #fff;
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
+        /* Исправленная стрелочка: узкая сторона (острие) смотрит вниз в центр колеса */
         .pvp-wheel-needle {
             position: absolute;
             top: -14px;
@@ -296,11 +297,11 @@
         .pvp-wheel-needle::after {
             content: '';
             position: absolute;
-            top: 0; left: 0;
+            bottom: 0; left: 0; /* Острие снизу, направлено в центр */
             width: 0; height: 0;
             border-left: 7px solid transparent;
             border-right: 7px solid transparent;
-            border-bottom: 26px solid #ffffff;
+            border-top: 26px solid #ffffff; /* Треугольник смотрит вниз */
         }
 
         /* EGGS GAME STYLES */
@@ -692,7 +693,7 @@
             border: 1px solid rgba(255,255,255,0.1);
         }
 
-        /* Bottom Nav Bar (3 items now: Games, Inventory, Profile) */
+        /* Bottom Nav Bar */
         .nav-bar {
             position: fixed;
             bottom: 0; left: 0; right: 0;
@@ -957,7 +958,7 @@
         </div>
     </div>
 
-    <!-- Bottom Nav Bar (Shop removed) -->
+    <!-- Bottom Nav Bar -->
     <div class="nav-bar">
         <button class="nav-item active" onclick="switchTab('games', this)">
             <svg viewBox="0 0 24 24"><path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm3-4c-.83 0-1.5-.67-1.5-1.5S19.67 8 20.5 8s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
@@ -1204,7 +1205,6 @@
             }
         });
 
-        // Полный список предметов (сохранен для системы апгрейдов, кейсов, яиц и инвентаря)
         const shopItems = [
             { id: 1, name: "Роза", price: 25, icon: "🌹", isImg: false },
             { id: 2, name: "Шампанское", price: 50, icon: "🍾", isImg: false },
@@ -1813,7 +1813,7 @@
             container.innerHTML = `
                 <div style="width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 12px;">
                     <div style="font-size: 16px; font-weight: 800;">⚔️ Розыгрыш PvP банка!</div>
-                    <div style="font-size: 12px; color: var(--text-muted); text-align: center;">Стрелочка выбирает победителя по зонам шанса...</div>
+                    <div style="font-size: 12px; color: var(--text-muted); text-align: center;">Стрелочка указывает на победителя...</div>
                     
                     <div class="pvp-circle-container">
                         <div class="pvp-wheel-needle" id="pvpRotatingNeedle" style="transform: rotate(0deg);"></div>
@@ -2140,6 +2140,7 @@
             updateUI();
             await saveCloud();
 
+            // Сначала строго определяем (роллим) выпавшие призы
             let wonDrops = [];
             for (let i = 0; i < count; i++) {
                 wonDrops.push(rollDrop(caseObj.drops));
@@ -2153,6 +2154,7 @@
                 for (let j = 0; j < 35; j++) {
                     rouletteItems.push(rollDrop(caseObj.drops));
                 }
+                // Гарантированно ставим выигранный предмет ровно на позицию 28, на которую укажет стрелочка
                 let winningIndex = 28;
                 rouletteItems[winningIndex] = wonDrops[i];
 
@@ -2199,15 +2201,19 @@
                     const containerCenter = 170;
                     let winningIndex = 28;
                     
-                    const targetOffset = (winningIndex * itemWidth) - containerCenter + (itemWidth / 2) + (Math.random() * 15 - 7);
+                    // Точный математический расчет смещения до центра элемента winningIndex без рассинхрона
+                    const targetOffset = (winningIndex * itemWidth) - containerCenter + (itemWidth / 2);
                     
                     track.style.transition = `transform ${3.2 + i * 0.15}s cubic-bezier(0.15, 0.85, 0.15, 1)`;
                     track.style.transform = `translateX(-${targetOffset}px)`;
                 }
 
                 setTimeout(async () => {
+                    clearInterval(tickInterval);
                     soundFX.win();
                     let wonItemsSummary = [];
+                    
+                    // Добавляем строго те самые wonDrops, которые крутились в рулетке
                     for (let drop of wonDrops) {
                         if (drop.type === 'stars') {
                             state.balance += drop.amount;
