@@ -766,8 +766,14 @@
                 </div>
                 <div id="adminControlArea" style="display:none; flex-direction:column; gap:8px;">
                     <input type="text" id="targetUserId" class="input-field" placeholder="ID игрока...">
-                    <input type="number" id="targetStars" class="input-field" placeholder="Количество звёзд (+ или -)...">
-                    <button class="btn" style="background:var(--success);" onclick="adminAddStars()">Выдать звёзды ⭐</button>
+                    <input type="number" id="targetStars" class="input-field" placeholder="Количество звёзд...">
+                    
+                    <div style="display: flex; gap: 8px; margin-top: 4px;">
+                        <button type="button" id="adminActionAdd" class="preset-btn" style="background: var(--success); color:#fff; padding: 10px; font-size: 12px;" onclick="setAdminAction('add')">➕ Добавить</button>
+                        <button type="button" id="adminActionTake" class="preset-btn" style="background: var(--card-bg); color: var(--text-muted); padding: 10px; font-size: 12px;" onclick="setAdminAction('take')">➖ Забрать</button>
+                    </div>
+
+                    <button class="btn" style="background:var(--accent); color:#000; margin-top: 4px;" onclick="adminExecute()">ГОТОВО</button>
                 </div>
             </div>
         </div>
@@ -850,6 +856,8 @@
             }
         };
 
+        let adminActionType = 'add'; // 'add' или 'take'
+
         const shopItems = [
             { id: 1, name: "Роза", price: 25, icon: "🌹", isImg: false },
             { id: 2, name: "Шампанское", price: 50, icon: "🍾", isImg: false },
@@ -869,34 +877,11 @@
             { id: 16, name: "Спорткар Модель", price: 15000, icon: "🏎️", isImg: false },
             { id: 17, name: "Яхта Модель", price: 20000, icon: "🛥️", isImg: false },
             { id: 18, name: "Частный Самолет", price: 35000, icon: "✈️", isImg: false },
-            { id: 19, name: "Космическая Ракета", price: 50000, icon: "🚀", isImg: false },
-            { id: 20, name: "Статуя", price: 500, icon: "🗽", isImg: false },
-            { id: 21, name: "Факел", price: 350, icon: "🔦", isImg: false },
-            { id: 22, name: "х2 кольцо", price: 200, icon: "💍", isImg: false },
-            { id: 23, name: "Шляпа", price: 750, icon: "🎩", isImg: false },
-            { id: 24, name: "Crystal Ball", price: 1000, icon: "🔮", isImg: false },
-            { id: 25, name: "Fine pen", price: 670, icon: "🖊️", isImg: false },
-            { id: 26, name: "Homemade Cake", price: 480, icon: "🎂", isImg: false },
-            { id: 27, name: "Evil eye", price: 700, icon: "👁️", isImg: false },
-            { id: 28, name: "Eternal Candle", price: 625, icon: "🕯️", isImg: false },
-            { id: 29, name: "Swiss watch", price: 4980, icon: "⌚", isImg: false },
-            { id: 30, name: "Sharp Tongue", price: 3900, icon: "🫦", isImg: false },
-            { id: 31, name: "Sky Stilettos", price: 1800, icon: "👠", isImg: false },
-            { id: 32, name: "Lol pop", price: 400, icon: "🍭", isImg: false },
-            { id: 33, name: "Ice cream", price: 410, icon: "🍦", isImg: false },
-            { id: 34, name: "Snoop Dogg", price: 485, icon: "🐶", isImg: false },
-            { id: 35, name: "Myth Mask", price: 860, icon: "👺", isImg: false },
-            { id: 36, name: "Mirage Lamp", price: 460, icon: "🏮", isImg: false },
-            { id: 37, name: "Snoop Cigar", price: 1300, icon: "🚬", isImg: false },
-            { id: 38, name: "Vintage Cigar", price: 3500, icon: "🚬", isImg: false },
-            { id: 39, name: "Durov's Glasses", price: 11000, icon: "🕶️", isImg: false },
-            { id: 40, name: "Instant Pamen", price: 400, icon: "🍜", isImg: false }
+            { id: 19, name: "Космическая Ракета", price: 50000, icon: "🚀", isImg: false }
         ];
 
-        // Сортировка магазина от дешевых к дорогим
         shopItems.sort((a, b) => a.price - b.price);
 
-        // Кейсы содержат ТОЛЬКО предметы из магазина с динамической ценой и сбалансированными шансами
         const casesList = [
             {
                 id: 'bear',
@@ -908,9 +893,7 @@
                     { name: "Роза", type: "item", price: 25, chance: 5.0, icon: "🌹", isImg: false },
                     { name: "Шампанское", type: "item", price: 50, chance: 3.5, icon: "🍾", isImg: false },
                     { name: "Кольцо", type: "item", price: 100, chance: 2.5, icon: "💍", isImg: false },
-                    { name: "Календарь", type: "item", price: 200, chance: 2.0, icon: "📆", isImg: false },
-                    { name: "Факел", type: "item", price: 350, chance: 1.5, icon: "🔦", isImg: false },
-                    { name: "Кубик", type: "item", price: 500, chance: 0.5, icon: "🎲", isImg: false }
+                    { name: "Календарь", type: "item", price: 200, chance: 2.0, icon: "📆", isImg: false }
                 ]
             },
             {
@@ -920,12 +903,10 @@
                 emojiIcon: '👑',
                 drops: [
                     { name: "50 звёзд", type: "stars", amount: 50, chance: 78.0, icon: "⭐", price: 50 },
-                    { name: "Коробка", type: "item", price: 350, chance: 6.0, icon: "📦", isImg: false },
-                    { name: "Кубик", type: "item", price: 500, chance: 5.0, icon: "🎲", isImg: false },
+                    { name: "Коробка", type: "item", price: 350, chance: 8.0, icon: "📦", isImg: false },
+                    { name: "Кубик", type: "item", price: 500, chance: 6.0, icon: "🎲", isImg: false },
                     { name: "Шляпа", type: "item", price: 750, chance: 4.5, icon: "🎩", isImg: false },
-                    { name: "Солнце", type: "item", price: 1000, chance: 3.5, icon: "☀️", isImg: false },
-                    { name: "Луна", type: "item", price: 1500, chance: 2.0, icon: "🌑", isImg: false },
-                    { name: "Лягушка PEPE", type: "item", price: 2500, chance: 1.0, icon: "🐸", isImg: false }
+                    { name: "Солнце", type: "item", price: 1000, chance: 3.5, icon: "☀️", isImg: false }
                 ]
             },
             {
@@ -935,12 +916,10 @@
                 emojiIcon: '💼',
                 drops: [
                     { name: "150 звёзд", type: "stars", amount: 150, chance: 80.0, icon: "⭐", price: 150 },
-                    { name: "НЛО", type: "item", price: 4000, chance: 7.0, icon: "🛸", isImg: false },
-                    { name: "Алмаз", type: "item", price: 5000, chance: 5.0, icon: "💎", isImg: false },
+                    { name: "НЛО", type: "item", price: 4000, chance: 8.0, icon: "🛸", isImg: false },
+                    { name: "Алмаз", type: "item", price: 5000, chance: 6.0, icon: "💎", isImg: false },
                     { name: "Золотая Медаль", type: "item", price: 7500, chance: 4.0, icon: "🥇", isImg: false },
-                    { name: "Яблоко Красное", type: "item", price: 10000, chance: 2.5, icon: "🍎", isImg: false },
-                    { name: "Спорткар Модель", type: "item", price: 15000, chance: 1.0, icon: "🏎️", isImg: false },
-                    { name: "Яхта Модель", type: "item", price: 20000, chance: 0.5, icon: "🛥️", isImg: false }
+                    { name: "Яблоко Красное", type: "item", price: 10000, chance: 2.0, icon: "🍎", isImg: false }
                 ]
             },
             {
@@ -950,12 +929,10 @@
                 emojiIcon: '🚗',
                 drops: [
                     { name: "75 звёзд", type: "stars", amount: 75, chance: 78.0, icon: "⭐", price: 75 },
-                    { name: "Солнце", type: "item", price: 1000, chance: 6.0, icon: "☀️", isImg: false },
-                    { name: "Луна", type: "item", price: 1500, chance: 5.0, icon: "🌑", isImg: false },
-                    { name: "Машинка", type: "item", price: 2000, chance: 4.5, icon: "🚗", isImg: false },
-                    { name: "Лягушка PEPE", type: "item", price: 2500, chance: 3.5, icon: "🐸", isImg: false },
-                    { name: "Игрушка Спорткар", type: "item", price: 3000, chance: 2.0, icon: "🚘", isImg: false },
-                    { name: "НЛО", type: "item", price: 4000, chance: 1.0, icon: "🛸", isImg: false }
+                    { name: "Солнце", type: "item", price: 1000, chance: 8.0, icon: "☀️", isImg: false },
+                    { name: "Луна", type: "item", price: 1500, chance: 6.0, icon: "🌑", isImg: false },
+                    { name: "Машинка", type: "item", price: 2000, chance: 5.0, icon: "🚗", isImg: false },
+                    { name: "Лягушка PEPE", type: "item", price: 2500, chance: 3.0, icon: "🐸", isImg: false }
                 ]
             },
             {
@@ -965,17 +942,14 @@
                 emojiIcon: '🔮',
                 drops: [
                     { name: "300 звёзд", type: "stars", amount: 300, chance: 82.0, icon: "⭐", price: 300 },
-                    { name: "Золотая Медаль", type: "item", price: 7500, chance: 6.0, icon: "🥇", isImg: false },
-                    { name: "Яблоко Красное", type: "item", price: 10000, chance: 4.5, icon: "🍎", isImg: false },
-                    { name: "Спорткар Модель", type: "item", price: 15000, chance: 3.5, icon: "🏎️", isImg: false },
-                    { name: "Яхта Модель", type: "item", price: 20000, chance: 2.5, icon: "🛥️", isImg: false },
-                    { name: "Частный Самолет", type: "item", price: 35000, chance: 1.0, icon: "✈️", isImg: false },
-                    { name: "Космическая Ракета", type: "item", price: 50000, chance: 0.5, icon: "🚀", isImg: false }
+                    { name: "Золотая Медаль", type: "item", price: 7500, chance: 7.0, icon: "🥇", isImg: false },
+                    { name: "Яблоко Красное", type: "item", price: 10000, chance: 5.0, icon: "🍎", isImg: false },
+                    { name: "Спорткар Модель", type: "item", price: 15000, chance: 4.0, icon: "🏎️", isImg: false },
+                    { name: "Яхта Модель", type: "item", price: 20000, chance: 2.0, icon: "🛥️", isImg: false }
                 ]
             }
         ];
 
-        // Сортировка содержимого всех кейсов от дешевых к дорогим
         casesList.forEach(c => {
             c.drops.sort((a, b) => a.price - b.price);
         });
@@ -1058,7 +1032,6 @@
             const grid = document.getElementById('inventoryGrid');
             const sellAllBtn = document.getElementById('sellAllBtn');
 
-            // Сортировка инвентаря игрока от дешевых к дорогим
             state.inventory.sort((a, b) => a.price - b.price);
 
             if (state.inventory.length === 0) {
@@ -1130,16 +1103,44 @@
             }
         }
 
-        async function adminAddStars() {
+        function setAdminAction(action) {
+            adminActionType = action;
+            const addBtn = document.getElementById('adminActionAdd');
+            const takeBtn = document.getElementById('adminActionTake');
+            
+            if (action === 'add') {
+                addBtn.style.background = 'var(--success)';
+                addBtn.style.color = '#fff';
+                takeBtn.style.background = 'var(--card-bg)';
+                takeBtn.style.color = 'var(--text-muted)';
+            } else {
+                takeBtn.style.background = 'var(--danger)';
+                takeBtn.style.color = '#fff';
+                addBtn.style.background = 'var(--card-bg)';
+                addBtn.style.color = 'var(--text-muted)';
+            }
+        }
+
+        async function adminExecute() {
             const targetId = document.getElementById('targetUserId').value.trim();
-            const amount = parseInt(document.getElementById('targetStars').value);
-            if (!targetId || isNaN(amount)) { alert("Заполните данные корректно!"); return; }
+            const amountInput = parseInt(document.getElementById('targetStars').value);
+
+            if (!targetId || isNaN(amountInput) || amountInput <= 0) {
+                alert("Введите корректный ID и количество звёзд!");
+                return;
+            }
 
             try {
                 const res = await fetch(`${FIREBASE_URL}/users/${targetId}.json`);
                 const user = await res.json();
-                const currentBal = user ? (user.balance || 0) : 0;
-                const newBal = Math.max(0, currentBal + amount);
+                let currentBal = user ? (user.balance || 0) : 0;
+
+                let newBal = currentBal;
+                if (adminActionType === 'add') {
+                    newBal += amountInput;
+                } else {
+                    newBal = Math.max(0, currentBal - amountInput);
+                }
 
                 await fetch(`${FIREBASE_URL}/users/${targetId}.json`, {
                     method: 'PATCH',
@@ -1151,9 +1152,11 @@
                     state.balance = newBal;
                     updateUI();
                 }
-                alert(`Успешно! Баланс игрока ${targetId} изменен. Новый баланс: ${newBal}`);
+
+                alert(`Успешно! Баланс игрока ${targetId} изменен. Новый баланс: ${newBal} ⭐`);
+                document.getElementById('targetStars').value = '';
             } catch(e) {
-                alert("Ошибка при обновлении баланса в базе.");
+                alert("Ошибка при обновлении баланса в базе данных.");
             }
         }
 
