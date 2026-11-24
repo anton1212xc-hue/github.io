@@ -563,6 +563,7 @@
             height: 6px;
             background: var(--text-muted);
             border-radius: 50%;
+            transform: translate(-50%, -50%);
         }
         .plinko-ball {
             position: absolute;
@@ -1755,9 +1756,9 @@
             }, 100);
         }
 
-        // --- PLINKO GAME LOGIC ---
+        // --- PLINKO GAME LOGIC (ПЛАВНАЯ ФИЗИКА + СТАВКА ЗА 1 ШАР) ---
         let plinkoState = {
-            totalBet: 500,
+            betPerBall: 100,
             ballsCount: 5,
             isPlaying: false
         };
@@ -1773,15 +1774,17 @@
             `).join('');
 
             let pegsHtml = '';
+            let pegCoords = [];
             for (let row = 0; row < 5; row++) {
                 let pegsInRow = row + 3;
                 let rowWidth = pegsInRow * 35;
-                let startX = (320 - rowWidth) / 2 + 15;
-                let topPos = 40 + row * 35;
+                let startX = (320 - rowWidth) / 2 + 17.5;
+                let topPos = 35 + row * 38;
 
                 for (let p = 0; p < pegsInRow; p++) {
                     let leftPos = startX + p * 35;
                     pegsHtml += `<div class="plinko-peg" style="top: ${topPos}px; left: ${leftPos}px;"></div>`;
+                    pegCoords.push({x: leftPos, y: topPos});
                 }
             }
 
@@ -1789,7 +1792,7 @@
                 <div class="plinko-container">
                     <div style="font-size: 15px; font-weight: 800;">⚪ Плинко (Plinko)</div>
                     <div style="font-size: 11px; color: var(--text-muted); text-align: center;">
-                        Центр — крупные иксы, края — мелкие!
+                        Ставка за 1 шар • Плавная физика падения!
                     </div>
 
                     <div class="plinko-board" id="plinkoBoard">
@@ -1802,8 +1805,8 @@
 
                     <div style="width: 100%; display: flex; gap: 8px;">
                         <div style="flex: 1;">
-                            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Общая ставка (⭐)</div>
-                            <input type="number" id="plinkoBetInput" class="input-field" value="${plinkoState.totalBet}" min="10" ${plinkoState.isPlaying ? 'disabled' : ''}>
+                            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Ставка за 1 шар (⭐)</div>
+                            <input type="number" id="plinkoBetInput" class="input-field" value="${plinkoState.betPerBall}" min="10" ${plinkoState.isPlaying ? 'disabled' : ''}>
                         </div>
                         <div style="flex: 1;">
                             <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Кол-во шариков</div>
@@ -1813,8 +1816,8 @@
 
                     <div class="bet-presets" style="width: 100%;">
                         <button class="preset-btn" onclick="setPlinkoConfig(100, 1)" ${plinkoState.isPlaying ? 'disabled' : ''}>1 шар (100⭐)</button>
-                        <button class="preset-btn" onclick="setPlinkoConfig(500, 5)" ${plinkoState.isPlaying ? 'disabled' : ''}>5 шаров (500⭐)</button>
-                        <button class="preset-btn" onclick="setPlinkoConfig(1000, 10)" ${plinkoState.isPlaying ? 'disabled' : ''}>10 шаров (1000⭐)</button>
+                        <button class="preset-btn" onclick="setPlinkoConfig(100, 5)" ${plinkoState.isPlaying ? 'disabled' : ''}>5 шаров (по 100)</button>
+                        <button class="preset-btn" onclick="setPlinkoConfig(500, 5)" ${plinkoState.isPlaying ? 'disabled' : ''}>5 шаров (по 500)</button>
                     </div>
 
                     <button class="btn" id="plinkoActionBtn" onclick="startPlinkoDrop()" ${plinkoState.isPlaying ? 'disabled' : ''}>
@@ -1826,29 +1829,31 @@
 
         function setPlinkoConfig(bet, count) {
             if (plinkoState.isPlaying) return;
-            plinkoState.totalBet = bet;
+            plinkoState.betPerBall = bet;
             plinkoState.ballsCount = count;
             document.getElementById('plinkoBetInput').value = bet;
             document.getElementById('plinkoBallsInput').value = count;
         }
 
         async function startPlinkoDrop() {
-            const betVal = parseInt(document.getElementById('plinkoBetInput').value);
+            const betPerBallVal = parseInt(document.getElementById('plinkoBetInput').value);
             const countVal = parseInt(document.getElementById('plinkoBallsInput').value);
 
-            if (isNaN(betVal) || betVal <= 0 || isNaN(countVal) || countVal <= 0) {
+            if (isNaN(betPerBallVal) || betPerBallVal <= 0 || isNaN(countVal) || countVal <= 0) {
                 alert("Введите корректную ставку и количество шариков!");
                 return;
             }
-            if (betVal > state.balance) {
-                alert("Недостаточно звёзд на балансе!");
+
+            const totalCost = betPerBallVal * countVal;
+            if (totalCost > state.balance) {
+                alert(`Недостаточно звёзд! Общая стоимость ${countVal} шариков по ${betPerBallVal} ⭐ составляет ${totalCost} ⭐.`);
                 return;
             }
 
-            plinkoState.totalBet = betVal;
+            plinkoState.betPerBall = betPerBallVal;
             plinkoState.ballsCount = countVal;
 
-            state.balance -= plinkoState.totalBet;
+            state.balance -= totalCost;
             updateUI();
             saveCloud();
 
@@ -1856,42 +1861,64 @@
             renderPlinkoScreen(document.getElementById('gameContentBody'));
 
             const board = document.getElementById('plinkoBoard');
-            const betPerBall = plinkoState.totalBet / plinkoState.ballsCount;
             let totalWon = 0;
 
+            // Запускаем шарики с небольшой задержкой друг за другом для красоты
             for (let i = 0; i < plinkoState.ballsCount; i++) {
                 soundFX.click();
                 let ball = document.createElement('div');
                 ball.className = 'plinko-ball';
-                
-                let currentX = 140 + (Math.random() * 40 - 20);
-                let currentY = 10;
-                ball.style.left = currentX + 'px';
-                ball.style.top = currentY + 'px';
                 board.appendChild(ball);
 
-                let slotIndex = 4;
-                for (let r = 0; r < 5; r++) {
-                    await new Promise(r => setTimeout(r, 150));
-                    currentY += 36;
-                    let dir = Math.random() > 0.5 ? 1 : -1;
-                    slotIndex += dir;
-                    slotIndex = Math.max(0, Math.min(8, slotIndex));
-                    currentX = 20 + slotIndex * 35;
-                    ball.style.left = currentX + 'px';
-                    ball.style.top = currentY + 'px';
-                    soundFX.rouletteTick();
-                }
+                // Начальная позиция сверху по центру с небольшим случайным смещением
+                let x = 160 + (Math.random() * 20 - 10);
+                let y = 10;
+                let vx = (Math.random() - 0.5) * 1.2;
+                let vy = 1.0;
 
-                await new Promise(r => setTimeout(r, 180));
-                currentY = 215;
-                ball.style.top = currentY + 'px';
+                // Вычисляем целевой слот заранее (от 0 до 8)
+                let targetSlot = Math.floor(Math.random() * 9);
+                // Делаем центр более вероятным для крупных иксов
+                if (Math.random() < 0.4) targetSlot = 3 + Math.floor(Math.random() * 3);
+                
+                let targetX = 20 + targetSlot * 35;
 
-                let mult = plinkoMultipliers[slotIndex];
-                totalWon += betPerBall * mult;
+                // Симуляция плавной физики через requestAnimationFrame
+                await new Promise((resolve) => {
+                    function animateBall() {
+                        vy += 0.25; // Гравитация
+                        x += vx;
+                        y += vy;
 
-                setTimeout(() => ball.remove(), 300);
-                await new Promise(r => setTimeout(r, 100));
+                        // Плавное притягивание к выбранному победному слоту по мере падения
+                        if (y > 100 && y < 210) {
+                            let diffX = targetX - x;
+                            vx += diffX * 0.02;
+                            vx *= 0.92; // Трение воздуха
+                        }
+
+                        // Проверка столкновений со стенками доски
+                        if (x < 15) { x = 15; vx *= -0.6; soundFX.rouletteTick(); }
+                        if (x > 305) { x = 305; vx *= -0.6; soundFX.rouletteTick(); }
+
+                        ball.style.left = x + 'px';
+                        ball.style.top = y + 'px';
+
+                        if (y >= 222) {
+                            // Долетел до лунок
+                            ball.remove();
+                            let mult = plinkoMultipliers[targetSlot];
+                            totalWon += plinkoState.betPerBall * mult;
+                            soundFX.rouletteTick();
+                            resolve();
+                        } else {
+                            requestAnimationFrame(animateBall);
+                        }
+                    }
+                    requestAnimationFrame(animateBall);
+                });
+
+                await new Promise(r => setTimeout(r, 120));
             }
 
             let finalWin = Math.floor(totalWon);
@@ -1902,7 +1929,7 @@
             soundFX.win();
             plinkoState.isPlaying = false;
             renderPlinkoScreen(document.getElementById('gameContentBody'));
-            alert("🎉 Плинко завершено! Вы выиграли " + finalWin + " ⭐!");
+            alert(`🎉 Плинко завершено! Вы поставили ${plinkoState.ballsCount * plinkoState.betPerBall} ⭐ и выиграли ${finalWin} ⭐!`);
         }
 
         // --- MINES GAME LOGIC ---
