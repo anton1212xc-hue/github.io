@@ -246,7 +246,7 @@
             text-align: center;
         }
 
-        /* PVP CIRCULAR WHEEL STYLES (STATOR WHEEL + ROTATING NEEDLE) */
+        /* PVP CIRCULAR WHEEL STYLES */
         .pvp-circle-container {
             position: relative;
             width: 240px;
@@ -281,7 +281,6 @@
             color: #fff;
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
-        /* Вращающаяся стрелочка сверху по центру */
         .pvp-wheel-needle {
             position: absolute;
             top: -14px;
@@ -290,7 +289,7 @@
             height: 130px;
             background: transparent;
             z-index: 25;
-            transform-origin: 50% 134px; /* Точка вращения точно в центре круга */
+            transform-origin: 50% 134px;
             transition: transform 3.8s cubic-bezier(0.15, 0.85, 0.15, 1);
             filter: drop-shadow(0 2px 6px rgba(0,0,0,0.7));
         }
@@ -396,7 +395,6 @@
             border-color: var(--accent);
         }
 
-        /* Wheel & Needle Container */
         .wheel-container {
             position: relative;
             width: 170px;
@@ -724,12 +722,12 @@
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(6px);
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(8px);
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 1000;
+            z-index: 2000;
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.2s;
@@ -911,12 +909,15 @@
         <div id="tab-profile" class="tab-content">
             <div class="section-title">Профиль и настройки</div>
             <div style="background:var(--card-bg); border:1px solid var(--card-border); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:12px; margin-bottom:14px;">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <div id="profileAvatarBox" style="width: 48px; height: 48px; border-radius: 50%; overflow: hidden; background: var(--primary-btn); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800;">👤</div>
-                    <div>
-                        <div style="font-weight:700; font-size: 16px;" id="profileName">Игрок</div>
-                        <div style="font-size:12px; color:var(--text-muted);" id="profileId">ID: 000000</div>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div id="profileAvatarBox" style="width: 48px; height: 48px; border-radius: 50%; overflow: hidden; background: var(--primary-btn); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800;">👤</div>
+                        <div>
+                            <div style="font-weight:700; font-size: 16px;" id="profileName">Игрок</div>
+                            <div style="font-size:12px; color:var(--text-muted);" id="profileId">ID: 000000</div>
+                        </div>
                     </div>
+                    <button class="btn" style="width: auto; padding: 6px 12px; font-size: 11px; background: var(--card-border);" onclick="openNicknameModal()">Сменить ник ✏️</button>
                 </div>
                 
                 <!-- Аудио Настройки -->
@@ -976,6 +977,16 @@
             <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
             Профиль
         </button>
+    </div>
+
+    <!-- MANDATORY NICKNAME MODAL (FOR NEW PLAYERS OR "Игрок") -->
+    <div class="modal-overlay" id="nicknameModal">
+        <div class="modal" onclick="event.stopPropagation()">
+            <h3>Добро пожаловать в Gorilla Case 🦍</h3>
+            <p>Пожалуйста, введите ваш никнейм для игры и участия в PvP:</p>
+            <input type="text" id="customNicknameInput" class="input-field" placeholder="Ваш никнейм..." maxlength="16">
+            <button class="btn" onclick="saveCustomNickname()">Сохранить и играть 🚀</button>
+        </div>
     </div>
 
     <!-- Deposit Modal -->
@@ -1292,10 +1303,18 @@
                 if (data && data.balance !== undefined) {
                     state.balance = data.balance;
                     state.inventory = data.inventory || [];
+                    if (data.name) state.user.name = data.name;
+                    if (data.photo) state.user.photo = data.photo;
                 } else {
                     await saveCloud();
                 }
             } catch(e) {}
+
+            // Проверяем, если ник "Игрок" или пустой дефолтный - просим ввести ник
+            if (!state.user.name || state.user.name === "Игрок" || state.user.name.trim() === "") {
+                document.getElementById('nicknameModal').classList.add('open');
+            }
+
             updateUI();
         }
 
@@ -1339,12 +1358,28 @@
             renderInventory();
         }
 
+        function openNicknameModal() {
+            document.getElementById('customNicknameInput').value = state.user.name === "Игрок" ? "" : state.user.name;
+            document.getElementById('nicknameModal').classList.add('open');
+        }
+
+        async function saveCustomNickname() {
+            const inputVal = document.getElementById('customNicknameInput').value.trim();
+            if (!inputVal) {
+                alert("Введите корректный никнейм!");
+                return;
+            }
+            state.user.name = inputVal;
+            document.getElementById('nicknameModal').classList.remove('open');
+            updateUI();
+            await saveCloud();
+        }
+
         function switchTab(tab, element) {
             if (upgradeState.isUpgrading || pvpState.isRolling || pvpState.hasJoined || planeState.isPlaying || minesState.isPlaying || eggsState.isOpening || plinkoState.isPlaying) {
                 alert("Нельзя переключать вкладки во время активной игры или участия в PvP!");
                 return;
             }
-            // Безопасный выход из апгрейда с возвратом предмета при смене вкладки
             resetUpgradeSlot();
 
             document.querySelectorAll('.tab-content').forEach(e => e.classList.remove('active'));
@@ -1548,7 +1583,6 @@
                 alert("Нельзя выйти во время активной игры, вращения рулетки или участия в PvP раунде!");
                 return;
             }
-            // Возврат предмета из апгрейда при выходе из комнаты
             resetUpgradeSlot();
 
             if (pvpState.syncInterval) {
@@ -1773,7 +1807,6 @@
 
             let totalBank = pvpState.players.reduce((sum, p) => sum + p.price, 0);
 
-            // Определяем победителя честно по долям шанса
             let winningRand = Math.random() * totalBank;
             let currentSum = 0;
             let winner = pvpState.players[0];
@@ -1786,7 +1819,6 @@
                 }
             }
 
-            // Формируем сектора круга (статичный круг с зонами по шансам)
             let wheelColors = ['#2563eb', '#f59e0b', '#22c55e', '#ef4444', '#a855f7', '#06b6d4'];
             let gradientStops = [];
             let currentDeg = 0;
@@ -1802,8 +1834,6 @@
             });
 
             let gradientStr = `conic-gradient(${gradientStops.join(', ')})`;
-
-            // Вычисляем угол, куда должна указать стрелка (центр сектора победителя)
             let winnerCenterDeg = (winner._startDeg + winner._endDeg) / 2;
             let targetRotation = 360 * 6 + winnerCenterDeg;
 
@@ -1893,7 +1923,6 @@
                     <div style="font-size: 16px; font-weight: 800; margin-bottom: 4px;">Выберите режим игры «Яйца»</div>
                     <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Сортировка: от дешёвых к дорогим 👇</div>
 
-                    <!-- 1. Самое дешевое (250) -->
                     <div class="egg-mode-card" onclick="startEggsSession(3, 250, 'bear_drops')" style="background: linear-gradient(135deg, #78350f, #451a03); border-color: #f59e0b;">
                         <div>
                             <div style="font-size: 16px; font-weight: 800; margin-bottom: 3px;">🧸 Медвежье Яйцо</div>
@@ -1902,7 +1931,6 @@
                         <div style="font-size: 15px; font-weight: 800; color: var(--accent);">⭐ 250</div>
                     </div>
 
-                    <!-- 2. Среднее (500) -->
                     <div class="egg-mode-card" onclick="startEggsSession(3, 500, 'standard')">
                         <div>
                             <div style="font-size: 16px; font-weight: 800; margin-bottom: 3px;">🐣 3 Яйца</div>
@@ -1911,7 +1939,6 @@
                         <div style="font-size: 15px; font-weight: 800; color: var(--accent);">⭐ 500</div>
                     </div>
 
-                    <!-- 3. Самое дорогое (750) -->
                     <div class="egg-mode-card" onclick="startEggsSession(5, 750, 'standard')" style="background: linear-gradient(135deg, #1b2838, #111722); border-color: #f59e0b;">
                         <div>
                             <div style="font-size: 16px; font-weight: 800; margin-bottom: 3px;">🐲 5 Яйц (Элитные)</div>
@@ -2803,7 +2830,6 @@
             isUpgrading: false
         };
 
-        // Функция возврата предмета в инвентарь при сбросе/выходе, исключающая дюп
         function resetUpgradeSlot() {
             if (upgradeState.sourceItem) {
                 state.inventory.push(upgradeState.sourceItem);
@@ -2895,11 +2921,9 @@
                         const rowIcon = item.isImg ? `<img src="${item.icon}" style="width:28px;height:28px;object-fit:contain;">` : `<span style="font-size:22px;">${item.icon}</span>`;
                         row.innerHTML = `<div style="display:flex; align-items:center; gap:10px;">${rowIcon}<div><div style="font-weight:700; font-size:13px;">${item.name}</div><div style="font-size:11px; color:var(--accent);">⭐ ${item.price}</div></div></div>`;
                         row.onclick = () => {
-                            // Если уже был выбран предмет, возвращаем старый в инвентарь
                             if (upgradeState.sourceItem) {
                                 state.inventory.push(upgradeState.sourceItem);
                             }
-                            // Сразу изымаем выбранный предмет из инвентаря для защиты от дюпа
                             upgradeState.sourceItem = item;
                             state.inventory.splice(index, 1);
                             
