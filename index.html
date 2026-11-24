@@ -246,6 +246,63 @@
             text-align: center;
         }
 
+        /* PVP CIRCULAR WHEEL STYLES */
+        .pvp-circle-container {
+            position: relative;
+            width: 240px;
+            height: 240px;
+            margin: 10px auto;
+        }
+        .pvp-wheel-box {
+            width: 240px;
+            height: 240px;
+            border-radius: 50%;
+            position: absolute;
+            top: 0; left: 0;
+            box-shadow: 0 0 20px rgba(0,0,0,0.6);
+            overflow: hidden;
+            border: 3px solid var(--card-border);
+            transition: transform 3.5s cubic-bezier(0.15, 0.85, 0.15, 1);
+        }
+        .pvp-wheel-inner-hub {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80px;
+            height: 80px;
+            background: var(--card-bg);
+            border: 3px solid var(--card-border);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            z-index: 5;
+            color: #fff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        .pvp-wheel-needle {
+            position: absolute;
+            top: -10px;
+            left: calc(50% - 6px);
+            width: 12px;
+            height: 40px;
+            background: transparent;
+            z-index: 20;
+            transform-origin: bottom center;
+        }
+        .pvp-wheel-needle::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 0; height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-bottom: 22px solid #fff;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+        }
+
         /* EGGS GAME STYLES */
         .eggs-lobby {
             display: flex;
@@ -957,12 +1014,18 @@
 
         let soundEnabled = localStorage.getItem('gorilla_sound') !== 'false';
 
+        // Получаем имя и аватарку из Telegram WebApp (Шузаграм / Телеграм клиент)
+        let tgUser = tg?.initDataUnsafe?.user;
+        let telegramName = tgUser?.first_name || (tgUser?.username ? `@${tgUser.username}` : "Игрок");
+        let telegramPhoto = tgUser?.photo_url || "";
+
         let state = {
             balance: 0,
             inventory: [],
             user: {
-                id: (tg?.initDataUnsafe?.user?.id || defaultId).toString(),
-                name: tg?.initDataUnsafe?.user?.first_name || "Игрок"
+                id: (tgUser?.id || defaultId).toString(),
+                name: telegramName,
+                photo: telegramPhoto
             }
         };
 
@@ -1223,6 +1286,8 @@
                 if (data && data.balance !== undefined) {
                     state.balance = data.balance;
                     state.inventory = data.inventory || [];
+                    if (data.name) state.user.name = data.name;
+                    if (data.photo) state.user.photo = data.photo;
                 } else {
                     await saveCloud();
                 }
@@ -1235,7 +1300,7 @@
                 await fetch(`${FIREBASE_URL}/users/${state.user.id}.json`, {
                     method: 'PATCH',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ balance: state.balance, inventory: state.inventory, name: state.user.name })
+                    body: JSON.stringify({ balance: state.balance, inventory: state.inventory, name: state.user.name, photo: state.user.photo })
                 });
             } catch(e) {}
         }
@@ -1257,8 +1322,8 @@
         }
 
         function switchTab(tab, element) {
-            if (upgradeState.isUpgrading) {
-                alert("Дождитесь окончания апгрейда!");
+            if (upgradeState.isUpgrading || pvpState.isRolling || pvpState.hasJoined || planeState.isPlaying || minesState.isPlaying || eggsState.isOpening || plinkoState.isPlaying) {
+                alert("Нельзя переключать вкладки во время активной игры или участия в PvP!");
                 return;
             }
             document.querySelectorAll('.tab-content').forEach(e => e.classList.remove('active'));
@@ -1458,17 +1523,20 @@
         }
 
         function closeGame() {
-            if (planeState.isPlaying || minesState.isPlaying || eggsState.isOpening || plinkoState.isPlaying || pvpState.isRolling || upgradeState.isUpgrading) {
-                alert("Нельзя выйти во время активной игры или розыгрыша!");
+            if (planeState.isPlaying || minesState.isPlaying || eggsState.isOpening || plinkoState.isPlaying || pvpState.isRolling || pvpState.hasJoined || upgradeState.isUpgrading) {
+                alert("Нельзя выйти во время активной игры, вращения рулетки или участия в PvP раунде!");
                 return;
             }
-            if (pvpState.syncInterval) clearInterval(pvpState.syncInterval);
+            if (pvpState.syncInterval) {
+                clearInterval(pvpState.syncInterval);
+                pvpState.syncInterval = null;
+            }
             document.getElementById('game-screen-container').classList.remove('active');
             document.getElementById('tab-games').classList.add('active');
             document.querySelector('.nav-bar').style.display = 'flex';
         }
 
-        // --- REAL SYNCHRONIZED PVP (LIVE FIREBASE BETS & CLOCK) ---
+        // --- REAL SYNCHRONIZED PVP (LIVE FIREBASE BETS & CIRCULAR WHEEL) ---
         let pvpState = {
             syncInterval: null,
             players: [],
@@ -1479,12 +1547,13 @@
 
         async function initPvpScreen(container) {
             await fetchPvpBets();
+            renderPvpScreen(container);
+
             if (!pvpState.syncInterval) {
                 pvpState.syncInterval = setInterval(async () => {
                     await checkPvpClockAndSync();
                 }, 1000);
             }
-            renderPvpScreen(container);
         }
 
         async function fetchPvpBets() {
@@ -1513,7 +1582,7 @@
             if (timerEl) timerEl.innerText = timeLeft;
 
             await fetchPvpBets();
-            renderPvpPlayersList();
+            updatePvpDynamicElements();
 
             if (currentSec === 0 && pvpState.lastProcessedMinute !== currentMinute) {
                 pvpState.lastProcessedMinute = currentMinute;
@@ -1538,7 +1607,7 @@
                     <div class="pvp-timer-box">
                         <div style="font-size: 12px; color: var(--text-muted);">До розыгрыша банка:</div>
                         <div style="font-size: 26px; font-weight: 900; color: var(--accent);"><span id="pvpTimerText">${timeLeft}</span> сек</div>
-                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Общий банк: <strong style="color:var(--success);">⭐ ${totalBank}</strong></div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Общий банк: <strong style="color:var(--success);" id="pvpTotalBank">⭐ ${totalBank}</strong></div>
                     </div>
 
                     <div style="width: 100%; display: flex; justify-content: space-between; align-items: center;">
@@ -1549,40 +1618,68 @@
                         ${renderPlayersListHtml()}
                     </div>
 
-                    ${!pvpState.hasJoined ? `
-                        <button class="btn" style="background: var(--success);" onclick="openPvpItemSelector()">ПОСТАВИТЬ ПРЕДМЕТ ⭐</button>
-                    ` : `
-                        <div style="background: rgba(34, 197, 94, 0.15); border: 1px solid var(--success); padding: 10px; border-radius: 12px; text-align: center; width: 100%; font-size: 13px; font-weight: 700; color: var(--success);">
-                            ✅ Ваша ставка принята! Ожидаем розыгрыш...
-                        </div>
-                    `}
+                    <div id="pvpActionArea" style="width: 100%;">
+                        ${!pvpState.hasJoined ? `
+                            <button class="btn" style="background: var(--success);" onclick="openPvpItemSelector()">ПОСТАВИТЬ ПРЕДМЕТ ⭐</button>
+                        ` : `
+                            <div style="background: rgba(34, 197, 94, 0.15); border: 1px solid var(--success); padding: 10px; border-radius: 12px; text-align: center; width: 100%; font-size: 13px; font-weight: 700; color: var(--success);">
+                                ✅ Ваша ставка принята! Ожидаем розыгрыш...
+                            </div>
+                        `}
+                    </div>
                 </div>
             `;
         }
 
-        function renderPlayersListHtml() {
-            if (pvpState.players.length === 0) {
-                return `<div style="text-align:center; color:var(--text-muted); padding:20px;">Пока нет ставок в этом раунде. Сделайте первую ставку!</div>`;
-            }
-            return pvpState.players.map(p => `
-                <div class="pvp-player-row">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <span style="font-size:20px;">${p.item.icon}</span>
-                        <div>
-                            <div style="font-weight:700; font-size:13px; color:${p.userId === state.user.id ? 'var(--accent)' : '#fff'};">${p.name} ${p.userId === state.user.id ? '(Вы)' : ''}</div>
-                            <div style="font-size:11px; color:var(--text-muted);">${p.item.name}</div>
-                        </div>
-                    </div>
-                    <div style="font-weight:800; font-size:13px; color:var(--accent);">⭐ ${p.price}</div>
-                </div>
-            `).join('');
-        }
-
-        function renderPvpPlayersList() {
+        function updatePvpDynamicElements() {
             const listContainer = document.getElementById('pvpPlayersListContainer');
             if (listContainer) {
                 listContainer.innerHTML = renderPlayersListHtml();
             }
+
+            const bankEl = document.getElementById('pvpTotalBank');
+            if (bankEl) {
+                let totalBank = pvpState.players.reduce((sum, p) => sum + p.price, 0);
+                bankEl.innerText = `⭐ ${totalBank}`;
+            }
+
+            const actionArea = document.getElementById('pvpActionArea');
+            if (actionArea && !pvpState.isRolling) {
+                if (!pvpState.hasJoined) {
+                    if (!actionArea.innerHTML.includes('ПОСТАВИТЬ ПРЕДМЕТ')) {
+                        actionArea.innerHTML = `<button class="btn" style="background: var(--success);" onclick="openPvpItemSelector()">ПОСТАВИТЬ ПРЕДМЕТ ⭐</button>`;
+                    }
+                } else {
+                    if (!actionArea.innerHTML.includes('Ваша ставка принята')) {
+                        actionArea.innerHTML = `
+                            <div style="background: rgba(34, 197, 94, 0.15); border: 1px solid var(--success); padding: 10px; border-radius: 12px; text-align: center; width: 100%; font-size: 13px; font-weight: 700; color: var(--success);">
+                                ✅ Ваша ставка принята! Ожидаем розыгрыш...
+                            </div>
+                        `;
+                    }
+                }
+            }
+        }
+
+        function renderPlayersListHtml() {
+            if (pvpState.players.length === 0) {
+                return `<div style="text-align:center; color:var(--text-muted); padding:20px;">Пока нет ставок в этом раунде. Сделайте первую ставка!</div>`;
+            }
+            return pvpState.players.map(p => {
+                let avatarHtml = p.photo ? `<img src="${p.photo}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;">` : `<div style="width:24px;height:24px;background:var(--primary-btn);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">${p.name.charAt(0).toUpperCase()}</div>`;
+                return `
+                    <div class="pvp-player-row">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            ${avatarHtml}
+                            <div>
+                                <div style="font-weight:700; font-size:13px; color:${p.userId === state.user.id ? 'var(--accent)' : '#fff'};">${p.name} ${p.userId === state.user.id ? '(Вы)' : ''}</div>
+                                <div style="font-size:11px; color:var(--text-muted);">${p.item.name}</div>
+                            </div>
+                        </div>
+                        <div style="font-weight:800; font-size:13px; color:var(--accent);">⭐ ${p.price}</div>
+                    </div>
+                `;
+            }).join('');
         }
 
         function openPvpItemSelector() {
@@ -1621,6 +1718,7 @@
             let betData = {
                 userId: state.user.id,
                 name: state.user.name,
+                photo: state.user.photo,
                 item: chosenItem,
                 price: chosenItem.price
             };
@@ -1633,7 +1731,7 @@
                 });
                 pvpState.hasJoined = true;
                 await fetchPvpBets();
-                renderPvpScreen(document.getElementById('gameContentBody'));
+                updatePvpDynamicElements();
             } catch(e) {
                 alert("Ошибка при отправке ставки в сеть.");
             }
@@ -1650,13 +1748,8 @@
             }
 
             let totalBank = pvpState.players.reduce((sum, p) => sum + p.price, 0);
-            
-            let rouletteItems = [];
-            for (let i = 0; i < 40; i++) {
-                let randomPlayer = pvpState.players[Math.floor(Math.random() * pvpState.players.length)];
-                rouletteItems.push(randomPlayer);
-            }
 
+            // Определяем победителя честно по долям
             let winningRand = Math.random() * totalBank;
             let currentSum = 0;
             let winner = pvpState.players[0];
@@ -1669,26 +1762,37 @@
                 }
             }
 
-            let winningIndex = 32;
-            rouletteItems[winningIndex] = winner;
+            // Генерируем conic-gradient для круговой рулетки
+            let wheelColors = ['#2563eb', '#f59e0b', '#22c55e', '#ef4444', '#a855f7', '#06b6d4'];
+            let gradientStops = [];
+            let currentDeg = 0;
 
-            let trackHtml = rouletteItems.map(p => `
-                <div class="roulette-item">
-                    <div style="font-size: 20px; margin-bottom: 1px;">${p.item.icon}</div>
-                    <div style="font-size: 9px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">${p.name}</div>
-                </div>
-            `).join('');
+            pvpState.players.forEach((p, idx) => {
+                let share = (p.price / totalBank) * 360;
+                let nextDeg = currentDeg + share;
+                let color = wheelColors[idx % wheelColors.length];
+                gradientStops.push(`${color} ${currentDeg}deg ${nextDeg}deg`);
+                p._startDeg = currentDeg;
+                p._endDeg = nextDeg;
+                currentDeg = nextDeg;
+            });
+
+            let gradientStr = `conic-gradient(${gradientStops.join(', ')})`;
+
+            // Находим угол попадания на победителя
+            let winnerCenterDeg = (winner._startDeg + winner._endDeg) / 2;
+            let targetRotation = 360 * 5 + (360 - winnerCenterDeg);
 
             container.innerHTML = `
                 <div style="width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 12px;">
                     <div style="font-size: 16px; font-weight: 800;">⚔️ Розыгрыш PvP банка!</div>
-                    <div style="font-size: 12px; color: var(--text-muted); text-align: center;">Рулетка крутится, определяется победитель...</div>
+                    <div style="font-size: 12px; color: var(--text-muted); text-align: center;">Крутится круговая рулетка...</div>
                     
-                    <div class="roulette-wrapper" style="margin: 20px 0;">
-                        <div class="roulette-container" style="height: 80px;">
-                            <div class="roulette-pointer"></div>
-                            <div class="roulette-track" id="pvpRouletteTrack" style="transform: translateX(0px);">
-                                ${trackHtml}
+                    <div class="pvp-circle-container">
+                        <div class="pvp-wheel-needle"></div>
+                        <div class="pvp-wheel-box" id="pvpCircularWheel" style="background: ${gradientStr}; transform: rotate(0deg);">
+                            <div class="pvp-wheel-inner-hub">
+                                <span style="font-size: 13px; color: var(--accent);">ПВП</span>
                             </div>
                         </div>
                     </div>
@@ -1703,17 +1807,13 @@
             }, 100);
 
             setTimeout(() => {
-                const track = document.getElementById('pvpRouletteTrack');
-                if (track) {
-                    const itemWidth = 65;
-                    const containerCenter = 170;
-                    const targetOffset = (winningIndex * itemWidth) - containerCenter + (itemWidth / 2) + (Math.random() * 10 - 5);
-                    
-                    track.style.transition = `transform 3.5s cubic-bezier(0.15, 0.85, 0.15, 1)`;
-                    track.style.transform = `translateX(-${targetOffset}px)`;
+                const wheel = document.getElementById('pvpCircularWheel');
+                if (wheel) {
+                    wheel.style.transform = `rotate(${targetRotation}deg)`;
                 }
 
                 setTimeout(async () => {
+                    clearInterval(tickInterval);
                     soundFX.win();
                     
                     let isUserWinner = (winner.userId === state.user.id);
