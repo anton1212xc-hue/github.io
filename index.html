@@ -795,7 +795,7 @@
                 <div class="game-banner pvp" onclick="openGame('pvp')">
                     <div>
                         <div class="game-title">PvP Битва ⚔️</div>
-                        <div class="game-desc">Ставки предметами каждые 60 секунд с реальными игроками</div>
+                        <div class="game-desc">Синхронные ставки реальных игроков каждые 60 секунд</div>
                     </div>
                     <div class="game-icon">🛡️</div>
                 </div>
@@ -939,7 +939,7 @@
         </div>
     </div>
 
-    <!-- Select Item Modal (For Upgrade & PvP) -->
+    <!-- Select Item Modal -->
     <div class="modal-overlay" id="selectModal" onclick="closeModal('selectModal', event)">
         <div class="modal" onclick="event.stopPropagation()">
             <h3 id="selectModalTitle">Выберите предмет</h3>
@@ -1257,6 +1257,10 @@
         }
 
         function switchTab(tab, element) {
+            if (upgradeState.isUpgrading) {
+                alert("Дождитесь окончания апгрейда!");
+                return;
+            }
             document.querySelectorAll('.tab-content').forEach(e => e.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
             document.getElementById(`tab-${tab}`).classList.add('active');
@@ -1454,115 +1458,131 @@
         }
 
         function closeGame() {
-            if (planeState.isPlaying || minesState.isPlaying || eggsState.isOpening || plinkoState.isPlaying || pvpState.isRolling) return;
+            if (planeState.isPlaying || minesState.isPlaying || eggsState.isOpening || plinkoState.isPlaying || pvpState.isRolling || upgradeState.isUpgrading) {
+                alert("Нельзя выйти во время активной игры или розыгрыша!");
+                return;
+            }
+            if (pvpState.syncInterval) clearInterval(pvpState.syncInterval);
             document.getElementById('game-screen-container').classList.remove('active');
             document.getElementById('tab-games').classList.add('active');
             document.querySelector('.nav-bar').style.display = 'flex';
         }
 
-        // --- PVP REAL PLAYERS ROOM LOGIC (КАЖДУЮ МИНУТУ ИГРЫ) ---
+        // --- REAL SYNCHRONIZED PVP (LIVE FIREBASE BETS & CLOCK) ---
         let pvpState = {
-            timeLeft: 60,
-            timerInterval: null,
-            players: [], // Список участников {name, item, price, isUser}
+            syncInterval: null,
+            players: [],
             hasJoined: false,
-            userBetItem: null,
-            isRolling: false
+            isRolling: false,
+            lastProcessedMinute: -1
         };
 
-        const botNamesPool = ["CryptoKing", "Sasha_Ton", "DurovFan", "StarLord", "GorillaBoss", "TonHolder", "MisterX", "MoonBoy", "DiamondHands"];
-
         async function initPvpScreen(container) {
-            if (!pvpState.timerInterval) {
-                // Инициализируем случайных соперников в лобби
-                generatePvpLobbyBots();
-                startPvpGlobalTimer();
+            await fetchPvpBets();
+            if (!pvpState.syncInterval) {
+                pvpState.syncInterval = setInterval(async () => {
+                    await checkPvpClockAndSync();
+                }, 1000);
             }
             renderPvpScreen(container);
         }
 
-        function generatePvpLobbyBots() {
-            pvpState.players = [];
-            // Добавим 2-4 случайных ботов-соперников с предметами
-            let botCount = 2 + Math.floor(Math.random() * 3);
-            let shuffledNames = [...botNamesPool].sort(() => 0.5 - Math.random());
-
-            for (let i = 0; i < botCount; i++) {
-                let randomShopItem = shopItems[Math.floor(Math.random() * shopItems.length)];
-                pvpState.players.push({
-                    name: shuffledNames[i],
-                    item: randomShopItem,
-                    price: randomShopItem.price,
-                    isUser: false
-                });
+        async function fetchPvpBets() {
+            try {
+                const res = await fetch(`${FIREBASE_URL}/pvp_room/bets.json`);
+                const data = await res.json();
+                pvpState.players = [];
+                if (data) {
+                    Object.keys(data).forEach(userId => {
+                        pvpState.players.push(data[userId]);
+                    });
+                }
+                pvpState.hasJoined = pvpState.players.some(p => p.userId === state.user.id);
+            } catch(e) {
+                pvpState.players = [];
             }
         }
 
-        function startPvpGlobalTimer() {
-            if (pvpState.timerInterval) clearInterval(pvpState.timerInterval);
-            pvpState.timeLeft = 60;
-            pvpState.hasJoined = false;
-            pvpState.userBetItem = null;
+        async function checkPvpClockAndSync() {
+            let now = new Date();
+            let currentSec = now.getSeconds();
+            let currentMinute = now.getMinutes();
+            let timeLeft = 60 - currentSec;
 
-            pvpState.timerInterval = setInterval(() => {
-                pvpState.timeLeft--;
-                
-                const timerEl = document.getElementById('pvpTimerText');
-                if (timerEl) timerEl.innerText = pvpState.timeLeft;
+            const timerEl = document.getElementById('pvpTimerText');
+            if (timerEl) timerEl.innerText = timeLeft;
 
-                if (pvpState.timeLeft <= 0) {
-                    clearInterval(pvpState.timerInterval);
-                    triggerPvpRoll();
+            await fetchPvpBets();
+            renderPvpPlayersList();
+
+            if (currentSec === 0 && pvpState.lastProcessedMinute !== currentMinute) {
+                pvpState.lastProcessedMinute = currentMinute;
+                if (pvpState.players.length > 0 && !pvpState.isRolling) {
+                    executePvpRoll();
                 }
-            }, 1000);
+            }
         }
 
         function renderPvpScreen(container) {
+            let now = new Date();
+            let timeLeft = 60 - now.getSeconds();
             let totalBank = pvpState.players.reduce((sum, p) => sum + p.price, 0);
-
-            let playersHtml = pvpState.players.map(p => `
-                <div class="pvp-player-row">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <span style="font-size:20px;">${p.item.icon}</span>
-                        <div>
-                            <div style="font-weight:700; font-size:13px; color:${p.isUser ? 'var(--accent)' : '#fff'};">${p.name} ${p.isUser ? '(Вы)' : ''}</div>
-                            <div style="font-size:11px; color:var(--text-muted);">${p.item.name}</div>
-                        </div>
-                    </div>
-                    <div style="font-weight:800; font-size:13px; color:var(--accent);">⭐ ${p.price}</div>
-                </div>
-            `).join('');
 
             container.innerHTML = `
                 <div class="pvp-container" id="pvpMainContainer">
                     <div style="font-size: 16px; font-weight: 800;">⚔️ Live PvP Битва</div>
                     <div style="font-size: 11px; color: var(--text-muted); text-align: center;">
-                        Катка каждые 60 секунд! Успейте поставить предмет. Победитель забирает весь банк!
+                        Синхронные ставки реальных игроков. Розыгрыш каждые 60 секунд!
                     </div>
 
                     <div class="pvp-timer-box">
-                        <div style="font-size: 12px; color: var(--text-muted);">До начала розыгрыша:</div>
-                        <div style="font-size: 26px; font-weight: 900; color: var(--accent);"><span id="pvpTimerText">${pvpState.timeLeft}</span> сек</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">До розыгрыша банка:</div>
+                        <div style="font-size: 26px; font-weight: 900; color: var(--accent);"><span id="pvpTimerText">${timeLeft}</span> сек</div>
                         <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Общий банк: <strong style="color:var(--success);">⭐ ${totalBank}</strong></div>
                     </div>
 
                     <div style="width: 100%; display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 12px; font-weight: 700; color: var(--text-muted);">Участники (${pvpState.players.length}):</span>
+                        <span style="font-size: 12px; font-weight: 700; color: var(--text-muted);">Ставки игроков онлайн:</span>
                     </div>
 
-                    <div class="pvp-players-list">
-                        ${playersHtml.length > 0 ? playersHtml : '<div style="text-align:center; color:var(--text-muted); padding:20px;">Пока нет ставок. Будьте первыми!</div>'}
+                    <div class="pvp-players-list" id="pvpPlayersListContainer">
+                        ${renderPlayersListHtml()}
                     </div>
 
                     ${!pvpState.hasJoined ? `
                         <button class="btn" style="background: var(--success);" onclick="openPvpItemSelector()">ПОСТАВИТЬ ПРЕДМЕТ ⭐</button>
                     ` : `
                         <div style="background: rgba(34, 197, 94, 0.15); border: 1px solid var(--success); padding: 10px; border-radius: 12px; text-align: center; width: 100%; font-size: 13px; font-weight: 700; color: var(--success);">
-                            ✅ Вы сделали ставку! Ожидаем конца раунда...
+                            ✅ Ваша ставка принята! Ожидаем розыгрыш...
                         </div>
                     `}
                 </div>
             `;
+        }
+
+        function renderPlayersListHtml() {
+            if (pvpState.players.length === 0) {
+                return `<div style="text-align:center; color:var(--text-muted); padding:20px;">Пока нет ставок в этом раунде. Сделайте первую ставку!</div>`;
+            }
+            return pvpState.players.map(p => `
+                <div class="pvp-player-row">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:20px;">${p.item.icon}</span>
+                        <div>
+                            <div style="font-weight:700; font-size:13px; color:${p.userId === state.user.id ? 'var(--accent)' : '#fff'};">${p.name} ${p.userId === state.user.id ? '(Вы)' : ''}</div>
+                            <div style="font-size:11px; color:var(--text-muted);">${p.item.name}</div>
+                        </div>
+                    </div>
+                    <div style="font-weight:800; font-size:13px; color:var(--accent);">⭐ ${p.price}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderPvpPlayersList() {
+            const listContainer = document.getElementById('pvpPlayersListContainer');
+            if (listContainer) {
+                listContainer.innerHTML = renderPlayersListHtml();
+            }
         }
 
         function openPvpItemSelector() {
@@ -1583,7 +1603,7 @@
                 const rowIcon = item.isImg ? `<img src="${item.icon}" style="width:28px;height:28px;object-fit:contain;">` : `<span style="font-size:22px;">${item.icon}</span>`;
                 row.innerHTML = `<div style="display:flex; align-items:center; gap:10px;">${rowIcon}<div><div style="font-weight:700; font-size:13px;">${item.name}</div><div style="font-size:11px; color:var(--accent);">⭐ ${item.price}</div></div></div>`;
                 row.onclick = () => {
-                    selectItemForPvp(index);
+                    sendPvpBet(index);
                     closeModal('selectModal');
                 };
                 list.appendChild(row);
@@ -1592,52 +1612,51 @@
             modal.classList.add('open');
         }
 
-        async function selectItemForPvp(inventoryIndex) {
+        async function sendPvpBet(inventoryIndex) {
             let chosenItem = state.inventory[inventoryIndex];
-            // Удаляем предмет из инвентаря игрока
             state.inventory.splice(inventoryIndex, 1);
             updateUI();
             await saveCloud();
 
-            pvpState.hasJoined = true;
-            pvpState.userBetItem = chosenItem;
-
-            // Добавляем игрока в список участников PvP
-            pvpState.players.push({
+            let betData = {
+                userId: state.user.id,
                 name: state.user.name,
                 item: chosenItem,
-                price: chosenItem.price,
-                isUser: true
-            });
+                price: chosenItem.price
+            };
 
-            renderPvpScreen(document.getElementById('gameContentBody'));
+            try {
+                await fetch(`${FIREBASE_URL}/pvp_room/bets/${state.user.id}.json`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(betData)
+                });
+                pvpState.hasJoined = true;
+                await fetchPvpBets();
+                renderPvpScreen(document.getElementById('gameContentBody'));
+            } catch(e) {
+                alert("Ошибка при отправке ставки в сеть.");
+            }
         }
 
-        async function triggerPvpRoll() {
+        async function executePvpRoll() {
             pvpState.isRolling = true;
             const container = document.getElementById('gameContentBody');
 
+            await fetchPvpBets();
             if (pvpState.players.length === 0) {
-                // Если никто не сделал ставку, просто пересоздаем таймер
-                generatePvpLobbyBots();
-                startPvpGlobalTimer();
-                renderPvpScreen(container);
                 pvpState.isRolling = false;
                 return;
             }
 
-            // Вычисляем проценты и шансы на основе стоимости предметов (веса)
             let totalBank = pvpState.players.reduce((sum, p) => sum + p.price, 0);
             
-            // Формируем массив для круговой рулетки
             let rouletteItems = [];
             for (let i = 0; i < 40; i++) {
-                // Добавляем участников в рулетку пропорционально их стоимости
                 let randomPlayer = pvpState.players[Math.floor(Math.random() * pvpState.players.length)];
                 rouletteItems.push(randomPlayer);
             }
 
-            // Определяем победителя рандомом на основе веса (процентов)
             let winningRand = Math.random() * totalBank;
             let currentSum = 0;
             let winner = pvpState.players[0];
@@ -1697,9 +1716,8 @@
                 setTimeout(async () => {
                     soundFX.win();
                     
-                    let resultMessage = "";
-                    if (winner.isUser) {
-                        // Если игрок выиграл, забираем все предметы банка в его инвентарь!
+                    let isUserWinner = (winner.userId === state.user.id);
+                    if (isUserWinner) {
                         pvpState.players.forEach(p => {
                             state.inventory.push({
                                 name: p.item.name,
@@ -1709,30 +1727,29 @@
                                 uid: Date.now() + Math.random()
                             });
                         });
-                        resultMessage = `🎉 Поздравляем! Вы выиграли PvP раунд и забрали весь банк на сумму ⭐ ${totalBank}!`;
-                    } else {
-                        resultMessage = `😢 Победил игрок **${winner.name}**. Вы проиграли свою ставку.`;
                     }
 
                     updateUI();
                     await saveCloud();
 
+                    try {
+                        await fetch(`${FIREBASE_URL}/pvp_room/bets.json`, { method: 'DELETE' });
+                    } catch(e) {}
+
                     container.innerHTML = `
                         <div style="width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; padding-top: 20px;">
-                            <div style="font-size: 22px; font-weight: 900; color: ${winner.isUser ? 'var(--success)' : 'var(--danger)'};">
-                                ${winner.isUser ? 'ПОБЕДА В РАУНДЕ! 🏆' : 'ПОРАЖЕНИЕ 💀'}
+                            <div style="font-size: 22px; font-weight: 900; color: ${isUserWinner ? 'var(--success)' : 'var(--danger)'};">
+                                ${isUserWinner ? 'ПОБЕДА В РАУНДЕ! 🏆' : 'ПОРАЖЕНИЕ 💀'}
                             </div>
                             <div style="font-size: 13px; color: var(--text-muted); line-height: 1.4;">
-                                Победитель: <strong style="color:var(--accent);">${winner.name}</strong>< выиграл банк ⭐ ${totalBank}
+                                Победитель: <strong style="color:var(--accent);">${winner.name}</strong> забрал банк ⭐ ${totalBank}
                             </div>
-                            <button class="btn" onclick="openGame('pvp')">Следующий раунд ⚔️</button>
+                            <button class="btn" onclick="openGame('pvp')">В лобби PvP ⚔️</button>
                         </div>
                     `;
 
                     pvpState.isRolling = false;
-                    // Сбрасываем лобби для следующей минуты
-                    generatePvpLobbyBots();
-                    startPvpGlobalTimer();
+                    pvpState.hasJoined = false;
                 }, 3800);
             }, 100);
         }
@@ -2658,7 +2675,8 @@
         let upgradeState = {
             sourceItem: null,
             targetItem: null,
-            chance: 50
+            chance: 50,
+            isUpgrading: false
         };
 
         function calculateChance() {
@@ -2719,6 +2737,7 @@
 
         let selectingType = null;
         function openUpgradeSelector(type) {
+            if (upgradeState.isUpgrading) return;
             selectingType = type;
             const modal = document.getElementById('selectModal');
             const list = document.getElementById('modalItemsList');
@@ -2777,7 +2796,10 @@
         }
 
         async function startUpgradeGame() {
-            if (!upgradeState.sourceItem || !upgradeState.targetItem) return;
+            if (!upgradeState.sourceItem || !upgradeState.targetItem || upgradeState.isUpgrading) return;
+            
+            upgradeState.isUpgrading = true;
+            
             const btn = document.getElementById('startUpgradeBtn');
             btn.disabled = true;
 
@@ -2812,6 +2834,8 @@
 
                     upgradeState.sourceItem = null;
                     upgradeState.targetItem = null;
+                    upgradeState.isUpgrading = false;
+
                     updateUI();
                     await saveCloud();
                     renderUpgradeScreen(document.getElementById('gameContentBody'));
