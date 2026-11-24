@@ -559,11 +559,12 @@
         }
         .plinko-peg {
             position: absolute;
-            width: 6px;
-            height: 6px;
+            width: 7px;
+            height: 7px;
             background: var(--text-muted);
             border-radius: 50%;
             transform: translate(-50%, -50%);
+            box-shadow: 0 0 3px rgba(255,255,255,0.2);
         }
         .plinko-ball {
             position: absolute;
@@ -1756,7 +1757,7 @@
             }, 100);
         }
 
-        // --- PLINKO GAME LOGIC (ПЛАВНАЯ ФИЗИКА + СТАВКА ЗА 1 ШАР) ---
+        // --- PLINKO GAME LOGIC (ТЯЖЁЛЫЕ ШАРИКИ, ФИЗИКА ОТТАЛКИВАНИЯ, РЕДКИЙ 10X) ---
         let plinkoState = {
             betPerBall: 100,
             ballsCount: 5,
@@ -1774,7 +1775,6 @@
             `).join('');
 
             let pegsHtml = '';
-            let pegCoords = [];
             for (let row = 0; row < 5; row++) {
                 let pegsInRow = row + 3;
                 let rowWidth = pegsInRow * 35;
@@ -1784,7 +1784,6 @@
                 for (let p = 0; p < pegsInRow; p++) {
                     let leftPos = startX + p * 35;
                     pegsHtml += `<div class="plinko-peg" style="top: ${topPos}px; left: ${leftPos}px;"></div>`;
-                    pegCoords.push({x: leftPos, y: topPos});
                 }
             }
 
@@ -1792,7 +1791,7 @@
                 <div class="plinko-container">
                     <div style="font-size: 15px; font-weight: 800;">⚪ Плинко (Plinko)</div>
                     <div style="font-size: 11px; color: var(--text-muted); text-align: center;">
-                        Ставка за 1 шар • Плавная физика падения!
+                        Физика с массой и отталкиванием • Редкий 10x!
                     </div>
 
                     <div class="plinko-board" id="plinkoBoard">
@@ -1861,64 +1860,117 @@
             renderPlinkoScreen(document.getElementById('gameContentBody'));
 
             const board = document.getElementById('plinkoBoard');
+            
+            // Собираем координаты всех штырьков на доске для физических столкновений
+            let pegs = [];
+            for (let row = 0; row < 5; row++) {
+                let pegsInRow = row + 3;
+                let rowWidth = pegsInRow * 35;
+                let startX = (320 - rowWidth) / 2 + 17.5;
+                let topPos = 35 + row * 38;
+
+                for (let p = 0; p < pegsInRow; p++) {
+                    let leftPos = startX + p * 35;
+                    pegs.push({ x: leftPos, y: topPos, radius: 4 });
+                }
+            }
+
             let totalWon = 0;
 
-            // Запускаем шарики с небольшой задержкой друг за другом для красоты
             for (let i = 0; i < plinkoState.ballsCount; i++) {
                 soundFX.click();
                 let ball = document.createElement('div');
                 ball.className = 'plinko-ball';
                 board.appendChild(ball);
 
-                // Начальная позиция сверху по центру с небольшим случайным смещением
-                let x = 160 + (Math.random() * 20 - 10);
+                // Тяжёлый шарик с массой и динамическими силами
+                let x = 160 + (Math.random() * 16 - 8);
                 let y = 10;
-                let vx = (Math.random() - 0.5) * 1.2;
-                let vy = 1.0;
+                let vx = (Math.random() - 0.5) * 1.5;
+                let vy = 0.5;
+                let radius = 7; // радиус шарика
 
-                // Вычисляем целевой слот заранее (от 0 до 8)
-                let targetSlot = Math.floor(Math.random() * 9);
-                // Делаем центр более вероятным для крупных иксов
-                if (Math.random() < 0.4) targetSlot = 3 + Math.floor(Math.random() * 3);
-                
-                let targetX = 20 + targetSlot * 35;
-
-                // Симуляция плавной физики через requestAnimationFrame
                 await new Promise((resolve) => {
-                    function animateBall() {
-                        vy += 0.25; // Гравитация
+                    function animatePhysics() {
+                        // Гравитация и сопротивление воздуха (изменение скорости в полёте)
+                        vy += 0.22; 
+                        vx *= 0.985;
+                        vy *= 0.99;
+
                         x += vx;
                         y += vy;
 
-                        // Плавное притягивание к выбранному победному слоту по мере падения
-                        if (y > 100 && y < 210) {
-                            let diffX = targetX - x;
-                            vx += diffX * 0.02;
-                            vx *= 0.92; // Трение воздуха
+                        // Столкновения со стенками доски (с отскоком)
+                        if (x < radius + 4) {
+                            x = radius + 4;
+                            vx = -vx * 0.7;
+                            soundFX.rouletteTick();
+                        }
+                        if (x > 320 - radius - 4) {
+                            x = 320 - radius - 4;
+                            vx = -vx * 0.7;
+                            soundFX.rouletteTick();
                         }
 
-                        // Проверка столкновений со стенками доски
-                        if (x < 15) { x = 15; vx *= -0.6; soundFX.rouletteTick(); }
-                        if (x > 305) { x = 305; vx *= -0.6; soundFX.rouletteTick(); }
+                        // Столкновения со штырьками (настоящая физика отталкивания!)
+                        for (let peg of pegs) {
+                            let dx = x - peg.x;
+                            let dy = y - peg.y;
+                            let dist = Math.sqrt(dx * dx + dy * dy);
+                            let minDist = radius + peg.radius;
+
+                            if (dist < minDist) {
+                                // Обработка упругого отскока от точки штырька
+                                let nx = dx / dist;
+                                let ny = dy / dist;
+                                
+                                // Выталкиваем шарик из штырька, чтобы не застревал
+                                x = peg.x + nx * minDist;
+                                y = peg.y + ny * minDist;
+
+                                // Отражение вектора скорости с потерей энергии (упругость)
+                                let dot = vx * nx + vy * ny;
+                                vx = (vx - 2 * dot * nx) * 0.75;
+                                vy = (vy - 2 * dot * ny) * 0.75;
+
+                                // Добавляем случайный толчок для вариативности
+                                vx += (Math.random() - 0.5) * 1.2;
+                                vy += Math.random() * 0.5;
+
+                                soundFX.rouletteTick();
+                            }
+                        }
 
                         ball.style.left = x + 'px';
                         ball.style.top = y + 'px';
 
+                        // Долетел до лунок внизу (y >= 222)
                         if (y >= 222) {
-                            // Долетел до лунок
                             ball.remove();
-                            let mult = plinkoMultipliers[targetSlot];
+
+                            // Определяем слот по координате X (всего 9 слотов по ~35.5 пикселей)
+                            let slotWidth = 320 / 9;
+                            let slotIndex = Math.floor(x / slotWidth);
+                            slotIndex = Math.max(0, Math.min(8, slotIndex));
+
+                            // Делаем редким выпадение центрального 10x (слот 4)
+                            // Если выпал 10x, с вероятностью 65% смещаем в соседние лунки (3.0x или 3.0x)
+                            if (slotIndex === 4 && Math.random() < 0.65) {
+                                slotIndex = Math.random() < 0.5 ? 3 : 5;
+                            }
+
+                            let mult = plinkoMultipliers[slotIndex];
                             totalWon += plinkoState.betPerBall * mult;
                             soundFX.rouletteTick();
                             resolve();
                         } else {
-                            requestAnimationFrame(animateBall);
+                            requestAnimationFrame(animatePhysics);
                         }
                     }
-                    requestAnimationFrame(animateBall);
+                    requestAnimationFrame(animatePhysics);
                 });
 
-                await new Promise(r => setTimeout(r, 120));
+                await new Promise(r => setTimeout(r, 150));
             }
 
             let finalWin = Math.floor(totalWon);
