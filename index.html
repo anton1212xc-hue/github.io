@@ -815,10 +815,17 @@
 
         <!-- PROFILE TAB -->
         <div id="tab-profile" class="tab-content">
-            <div class="section-title">Профиль</div>
-            <div style="background:var(--card-bg); border:1px solid var(--card-border); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:10px; margin-bottom:14px;">
+            <div class="section-title">Профиль и настройки</div>
+            <div style="background:var(--card-bg); border:1px solid var(--card-border); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:12px; margin-bottom:14px;">
                 <div style="font-weight:700;" id="profileName">Игрок</div>
                 <div style="font-size:12px; color:var(--text-muted);" id="profileId">ID: 000000</div>
+                
+                <!-- Аудио Настройки -->
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--card-border); padding-top: 10px;">
+                    <span style="font-size: 13px; font-weight: 700;">🔊 Звуковые эффекты</span>
+                    <button class="btn" id="soundToggleBtn" style="width: auto; padding: 6px 14px; font-size: 12px; background: var(--success);" onclick="toggleSound()">ВКЛ</button>
+                </div>
+
                 <button class="btn" onclick="openWithdrawModal()">Вывести звёзды 📤</button>
             </div>
 
@@ -912,6 +919,8 @@
         let defaultId = localStorage.getItem('gorilla_id') || Math.floor(100000 + Math.random() * 900000).toString();
         localStorage.setItem('gorilla_id', defaultId);
 
+        let soundEnabled = localStorage.getItem('gorilla_sound') !== 'false';
+
         let state = {
             balance: 0,
             inventory: [],
@@ -922,6 +931,160 @@
         };
 
         let adminActionType = 'add';
+
+        // --- SYNTHESIZED SOUND ENGINE (Web Audio API) ---
+        let audioCtx = null;
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        const soundFX = {
+            click() {
+                if (!soundEnabled) return;
+                try {
+                    const ctx = getAudioContext();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.05);
+                    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.05);
+                } catch(e) {}
+            },
+            rouletteTick() {
+                if (!soundEnabled) return;
+                try {
+                    const ctx = getAudioContext();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(600, ctx.currentTime);
+                    gain.gain.setValueAtTime(0.05, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.03);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.03);
+                } catch(e) {}
+            },
+            win() {
+                if (!soundEnabled) return;
+                try {
+                    const ctx = getAudioContext();
+                    [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.08);
+                        gain.gain.setValueAtTime(0.12, ctx.currentTime + i * 0.08);
+                        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.08 + 0.25);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(ctx.currentTime + i * 0.08);
+                        osc.stop(ctx.currentTime + i * 0.08 + 0.25);
+                    });
+                } catch(e) {}
+            },
+            crack() {
+                if (!soundEnabled) return;
+                try {
+                    const ctx = getAudioContext();
+                    // Шум + резкие щелчки треска
+                    for(let i=0; i<3; i++) {
+                        let osc = ctx.createOscillator();
+                        let gain = ctx.createGain();
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(120 + Math.random()*200, ctx.currentTime + i*0.1);
+                        gain.gain.setValueAtTime(0.15, ctx.currentTime + i*0.1);
+                        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i*0.1 + 0.08);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(ctx.currentTime + i*0.1);
+                        osc.stop(ctx.currentTime + i*0.1 + 0.08);
+                    }
+                } catch(e) {}
+            },
+            mineSafe() {
+                if (!soundEnabled) return;
+                try {
+                    const ctx = getAudioContext();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(800, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.1);
+                } catch(e) {}
+            },
+            mineBoom() {
+                if (!soundEnabled) return;
+                try {
+                    const ctx = getAudioContext();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(120, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(30, ctx.currentTime + 0.4);
+                    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.4);
+                } catch(e) {}
+            },
+            planeFly() {
+                if (!soundEnabled) return;
+                try {
+                    const ctx = getAudioContext();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(150, ctx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(450, ctx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.2);
+                } catch(e) {}
+            }
+        };
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            localStorage.setItem('gorilla_sound', soundEnabled);
+            const btn = document.getElementById('soundToggleBtn');
+            if (btn) {
+                btn.innerText = soundEnabled ? "ВКЛ" : "ВЫКЛ";
+                btn.style.background = soundEnabled ? "var(--success)" : "var(--danger)";
+            }
+            soundFX.click();
+        }
+
+        // Автоклик со звуком для всех кнопок
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('button') || e.target.closest('.game-banner') || e.target.closest('.case-card') || e.target.closest('.egg-mode-card')) {
+                soundFX.click();
+            }
+        });
 
         const shopItems = [
             { id: 1, name: "Роза", price: 25, icon: "🌹", isImg: false },
@@ -1048,6 +1211,13 @@
             document.getElementById('profileName').innerText = state.user.name;
             document.getElementById('profileId').innerText = `ID: ${state.user.id}`;
             document.getElementById('modalUserId').innerText = state.user.id;
+            
+            const soundBtn = document.getElementById('soundToggleBtn');
+            if (soundBtn) {
+                soundBtn.innerText = soundEnabled ? "ВКЛ" : "ВЫКЛ";
+                soundBtn.style.background = soundEnabled ? "var(--success)" : "var(--danger)";
+            }
+
             renderShop();
             renderInventory();
         }
@@ -1101,7 +1271,7 @@
 
             if (state.inventory.length === 0) {
                 sellAllBtn.style.display = 'none';
-                grid.innerHTML = `<div style="grid-column: span 2; text-align:center; color:var(--text-muted); padding:30px;">Инвентарь пуст. Купите предметы в магазине!</div>`;
+                grid.innerHTML = `<div style="grid-column: span 2; text-align:center; color:var(--text-muted); padding:30px;">Инвентарь пуст. Купите что-то в магазине!</div>`;
                 return;
             }
 
@@ -1266,7 +1436,7 @@
             container.innerHTML = `
                 <div class="eggs-lobby">
                     <div style="font-size: 16px; font-weight: 800; margin-bottom: 4px;">Выберите режим игры «Яйца»</div>
-                    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Разбивайте яйца и получайте ценные призы!</div>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Разбивайте яйца молоточком и получайте призы!</div>
 
                     <div class="egg-mode-card" onclick="startEggsSession(3, 500)">
                         <div>
@@ -1302,22 +1472,18 @@
             eggsState.isOpening = false;
             eggsState.prizes = [];
 
-            // Генерация призов для каждого яйца
             let maxLimit = count === 3 ? 1000 : 1500;
             let availableShopItems = shopItems.filter(i => i.price <= maxLimit);
 
             for (let i = 0; i < count; i++) {
                 let rand = Math.random() * 100;
                 if (rand < 65) {
-                    // Звёзды на баланс
                     let starAmount = Math.floor(Math.random() * (maxLimit * 0.4)) + 10;
                     eggsState.prizes.push({ type: 'stars', name: `${starAmount} звёзд`, amount: starAmount, price: starAmount, icon: '⭐' });
                 } else if (rand < 92 && availableShopItems.length > 0) {
-                    // Дешевый предмет из магазина
                     let randomItem = availableShopItems[Math.floor(Math.random() * availableShopItems.length)];
                     eggsState.prizes.push({ type: 'item', name: randomItem.name, price: randomItem.price, icon: randomItem.icon, isImg: randomItem.isImg });
                 } else {
-                    // Редкий дорогой приз
                     let rareItems = shopItems.filter(i => i.price <= maxLimit && i.price >= maxLimit * 0.6);
                     if (rareItems.length > 0) {
                         let rareItem = rareItems[Math.floor(Math.random() * rareItems.length)];
@@ -1346,7 +1512,7 @@
             body.innerHTML = `
                 <div style="width: 100%; max-width: 360px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
                     <div style="font-size: 16px; font-weight: 800;">Выберите яйцо для разбития 🔨</div>
-                    <div style="font-size: 12px; color: var(--text-muted); text-align: center;">Кликните на любое яйцо, чтобы ударить молоточком и узнать приз!</div>
+                    <div style="font-size: 12px; color: var(--text-muted); text-align: center;">Кликните на яйцо, чтобы ударить молотком!</div>
                     <div class="egg-arena">
                         ${eggsHtml}
                     </div>
@@ -1359,12 +1525,14 @@
             if (eggsState.isOpening) return;
             eggsState.isOpening = true;
 
+            soundFX.crack();
             const eggEl = document.getElementById(`egg_${index}`);
             eggEl.classList.add('crack');
             eggEl.innerText = '🔨🥚';
 
             await new Promise(r => setTimeout(r, 1200));
 
+            soundFX.win();
             const prize = eggsState.prizes[index];
             if (prize.type === 'stars') {
                 state.balance += prize.amount;
@@ -1377,7 +1545,6 @@
             updateUI();
             await saveCloud();
 
-            // Показать остальные яйца
             for (let i = 0; i < eggsState.count; i++) {
                 if (i !== index) {
                     const otherEl = document.getElementById(`egg_${i}`);
@@ -1520,6 +1687,14 @@
                 </div>
             `;
 
+            // Звуки рулетки
+            let tickCount = 0;
+            let tickInterval = setInterval(() => {
+                soundFX.rouletteTick();
+                tickCount++;
+                if (tickCount > 25) clearInterval(tickInterval);
+            }, 120);
+
             setTimeout(() => {
                 for (let i = 0; i < count; i++) {
                     const track = document.getElementById(`rouletteTrack_${i}`);
@@ -1536,6 +1711,7 @@
                 }
 
                 setTimeout(async () => {
+                    soundFX.win();
                     let wonItemsSummary = [];
                     for (let drop of wonDrops) {
                         if (drop.type === 'stars') {
@@ -1671,6 +1847,7 @@
             const shuffles = cupsState.difficulty === 'easy' ? 6 : 12;
 
             for (let i = 0; i < shuffles; i++) {
+                soundFX.click();
                 let randomCup = Math.floor(Math.random() * 3);
                 cupElements[randomCup].style.transform = 'translateY(-15px)';
                 await new Promise(r => setTimeout(r, speed));
@@ -1697,6 +1874,7 @@
             const mult = cupsState.difficulty === 'easy' ? 1.25 : 2.0;
 
             if (won) {
+                soundFX.win();
                 const winAmount = Math.floor(cupsState.bet * mult);
                 state.balance += winAmount;
                 updateUI();
@@ -1716,7 +1894,8 @@
             isPlaying: false,
             bombs: [],
             opened: [],
-            gameOver: false
+            gameOver: false,
+            bgMusicTimer: null
         };
 
         function getMinesMultiplier(openedCount, mineCount) {
@@ -1839,6 +2018,28 @@
             minesState.isPlaying = true;
             minesState.gameOver = false;
 
+            // Фоновая мини-песенка при игре в мины
+            if (minesState.bgMusicTimer) clearInterval(minesState.bgMusicTimer);
+            let notes = [300, 350, 400, 450];
+            let noteIdx = 0;
+            minesState.bgMusicTimer = setInterval(() => {
+                if (!soundEnabled || !minesState.isPlaying) return;
+                try {
+                    const ctx = getAudioContext();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(notes[noteIdx % notes.length], ctx.currentTime);
+                    gain.gain.setValueAtTime(0.03, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.15);
+                    noteIdx++;
+                } catch(e) {}
+            }, 300);
+
             renderMinesScreen(document.getElementById('gameContentBody'));
         }
 
@@ -1851,9 +2052,12 @@
             if (minesState.bombs.includes(index)) {
                 minesState.isPlaying = false;
                 minesState.gameOver = true;
+                if (minesState.bgMusicTimer) clearInterval(minesState.bgMusicTimer);
+                soundFX.mineBoom();
                 renderMinesScreen(document.getElementById('gameContentBody'));
                 setTimeout(() => alert("💥 Бах! Вы наткнулись на мину. Ставка сгорела."), 100);
             } else {
+                soundFX.mineSafe();
                 const safeTotal = 9 - minesState.mineCount;
                 if (minesState.opened.length >= safeTotal) {
                     cashOutMines();
@@ -1865,6 +2069,7 @@
 
         async function cashOutMines() {
             if (!minesState.isPlaying || minesState.opened.length === 0) return;
+            if (minesState.bgMusicTimer) clearInterval(minesState.bgMusicTimer);
 
             const mult = getMinesMultiplier(minesState.opened.length, minesState.mineCount);
             const winAmount = Math.floor(minesState.bet * mult);
@@ -1876,6 +2081,7 @@
             updateUI();
             await saveCloud();
 
+            soundFX.win();
             renderMinesScreen(document.getElementById('gameContentBody'));
             setTimeout(() => alert(`💎 Победа! Вы забрали ${winAmount} ⭐ (${mult}x)!`), 100);
         }
@@ -1988,6 +2194,7 @@
             
             let speed = 40;
             planeState.timer = setInterval(() => {
+                soundFX.planeFly();
                 planeState.currentX += 0.02;
                 multEl.innerText = planeState.currentX.toFixed(2) + "x";
 
@@ -2010,6 +2217,7 @@
             clearInterval(planeState.timer);
             planeState.isPlaying = false;
 
+            soundFX.win();
             const winAmount = Math.floor(planeState.bet * planeState.currentX);
             state.balance += winAmount;
             updateUI();
@@ -2026,6 +2234,7 @@
             clearInterval(planeState.timer);
             planeState.isPlaying = false;
 
+            soundFX.mineBoom();
             const statusEl = document.getElementById('planeStatus');
             statusEl.innerText = `💥 Самолёт упал на ${planeState.crashX.toFixed(2)}x! Ставка сгорела.`;
             statusEl.style.color = "var(--danger)";
@@ -2172,6 +2381,8 @@
             needle.style.transition = 'none';
             needle.style.transform = 'rotate(0deg)';
 
+            let tickInterval = setInterval(() => soundFX.rouletteTick(), 100);
+
             setTimeout(() => {
                 const success = Math.random() * 100 < upgradeState.chance;
                 const greenEndDeg = upgradeState.chance * 3.6;
@@ -2182,13 +2393,16 @@
                 needle.style.transform = `rotate(${totalRot}deg)`;
 
                 setTimeout(async () => {
+                    clearInterval(tickInterval);
                     const srcIndex = state.inventory.findIndex(i => i.uid === upgradeState.sourceItem.uid);
                     if (srcIndex !== -1) state.inventory.splice(srcIndex, 1);
 
                     if (success) {
+                        soundFX.win();
                         state.inventory.push({ ...upgradeState.targetItem, uid: Date.now() + Math.random() });
                         alert(`🎉 Успех! Вы выиграли ${upgradeState.targetItem.name}!`);
                     } else {
+                        soundFX.mineBoom();
                         alert("😢 Упс, апгрейд не удался. Предмет сгорел.");
                     }
 
