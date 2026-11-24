@@ -769,26 +769,27 @@
         };
 
         const shopItems = [
-            { id: 1, name: "Роза", price: 25, icon: "🌹", isImg: false },
-            { id: 2, name: "Шампанское", price: 50, icon: "🍾", isImg: false },
-            { id: 3, name: "Кольцо", price: 100, icon: "💍", isImg: false },
-            { id: 4, name: "Календарь", price: 200, icon: "📆", isImg: false },
-            { id: 5, name: "Коробка", price: 350, icon: "📦", isImg: false },
-            { id: 6, name: "Кубик", price: 500, icon: "🎲", isImg: false },
-            { id: 7, name: "Шляпа", price: 750, icon: "🎩", isImg: false },
-            { id: 8, name: "Солнце", price: 1000, icon: "☀️", isImg: false },
-            { id: 9, name: "Луна", price: 1500, icon: "🌑", isImg: false },
-            { id: 10, name: "Машинка", price: 2000, icon: "🚗", isImg: false },
-            { id: 11, name: "Лягушка PEPE", price: 2500, icon: "🐸", isImg: false },
-            { id: 12, name: "Игрушка Спорткар", price: 3000, icon: "🚘", isImg: false },
-            { id: 13, name: "НЛО", price: 4000, icon: "🛸", isImg: false },
-            { id: 14, name: "Алмаз", price: 5000, icon: "💎", isImg: false },
-            { id: 15, name: "Золотая Медаль", price: 7500, icon: "🥇", isImg: false },
-            { id: 16, name: "Яблоко Красное", price: 10000, icon: "🍎", isImg: false },
-            { id: 17, name: "Спорткар Модель", price: 15000, icon: "🏎️", isImg: false },
-            { id: 18, name: "Яхта Модель", price: 20000, icon: "🛥️", isImg: false },
-            { id: 19, name: "Частный Самолет", price: 35000, icon: "✈️", isImg: false },
-            { id: 20, name: "Космическая Ракета", price: 50000, icon: "🚀", isImg: false }
+            { id: 1, name: "Статуя", price: 500, icon: "🗽", isImg: false },
+            { id: 2, name: "Факел", price: 350, icon: "🔦", isImg: false },
+            { id: 3, name: "х2 кольцо", price: 200, icon: "💍", isImg: false },
+            { id: 4, name: "Шляпа", price: 750, icon: "🎩", isImg: false },
+            { id: 5, name: "Crystal Ball", price: 1000, icon: "🔮", isImg: false },
+            { id: 6, name: "Fine pen", price: 670, icon: "🖊️", isImg: false },
+            { id: 7, name: "Homemade Cake", price: 480, icon: "🎂", isImg: false },
+            { id: 8, name: "Evil eye", price: 700, icon: "👁️", isImg: false },
+            { id: 9, name: "Eternal Candle", price: 625, icon: "🕯️", isImg: false },
+            { id: 10, name: "Swiss watch", price: 4980, icon: "⌚", isImg: false },
+            { id: 11, name: "Sharp Tongue", price: 3900, icon: "🫦", isImg: false },
+            { id: 12, name: "Sky Stilettos", price: 1800, icon: "👠", isImg: false },
+            { id: 13, name: "Lol pop", price: 400, icon: "🍭", isImg: false },
+            { id: 14, name: "Ice cream", price: 410, icon: "🍦", isImg: false },
+            { id: 15, name: "Snoop Dogg", price: 485, icon: "🐶", isImg: false },
+            { id: 16, name: "Myth Mask", price: 860, icon: "👺", isImg: false },
+            { id: 17, name: "Mirage Lamp", price: 460, icon: "🏮", isImg: false },
+            { id: 18, name: "Snoop Cigar", price: 1300, icon: "🚬", isImg: false },
+            { id: 19, name: "Vintage Cigar", price: 3500, icon: "🚬", isImg: false },
+            { id: 20, name: "Durov's Glasses", price: 11000, icon: "🕶️", isImg: false },
+            { id: 21, name: "Instant Pamen", price: 400, icon: "🍜", isImg: false }
         ];
 
         async function loadGame() {
@@ -1124,7 +1125,7 @@
                 state.balance += winAmount;
                 updateUI();
                 await saveCloud();
-                setTimeout(() => alert(`🎉 Победа! Под стаканом была роза 🌹. Вы выиграли ${winAmount} ⭐!`), 150);
+                setTimeout(() => alert(`🎉 Победа! Под стаканом был приз. Вы выиграли ${winAmount} ⭐!`), 150);
             } else {
                 await saveCloud();
                 setTimeout(() => alert(`😢 Увы! Приз был под другим стаканом. Ставка сгорела.`), 150);
