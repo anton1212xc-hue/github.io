@@ -893,7 +893,7 @@
             { id: 40, name: "Instant Pamen", price: 400, icon: "🍜", isImg: false }
         ];
 
-        // Сортируем магазин по возрастанию цены от маленькой к высокой
+        // Сортировка магазина от дешевых к дорогим
         shopItems.sort((a, b) => a.price - b.price);
 
         const casesList = [
@@ -903,18 +903,18 @@
                 price: 149,
                 emojiIcon: '🧸',
                 drops: [
-                    { name: "5 звёзд", type: "stars", amount: 5, chance: 85.0, icon: "⭐", price: 5 },
-                    { name: "Instant Pamen", type: "item", price: 400, chance: 3.0, icon: "🍜", isImg: false },
-                    { name: "Ice cream", type: "item", price: 410, chance: 2.5, icon: "🍦", isImg: false },
-                    { name: "Mirage Lamp", type: "item", price: 460, chance: 2.5, icon: "🏮", isImg: false },
-                    { name: "Статуя", type: "item", price: 500, chance: 3.0, icon: "🗽", isImg: false },
-                    { name: "Fine pen", type: "item", price: 670, chance: 2.0, icon: "🖊️", isImg: false },
-                    { name: "Шляпа", type: "item", price: 750, chance: 2.0, icon: "🎩", isImg: false }
+                    { name: "5 звёзд", type: "stars", amount: 5, chance: 88.0, icon: "⭐", price: 5 },
+                    { name: "Instant Pamen", type: "item", price: 400, chance: 2.5, icon: "🍜", isImg: false },
+                    { name: "Ice cream", type: "item", price: 410, chance: 2.0, icon: "🍦", isImg: false },
+                    { name: "Mirage Lamp", type: "item", price: 460, chance: 2.0, icon: "🏮", isImg: false },
+                    { name: "Статуя", type: "item", price: 500, chance: 2.5, icon: "🗽", isImg: false },
+                    { name: "Fine pen", type: "item", price: 670, chance: 1.5, icon: "🖊️", isImg: false },
+                    { name: "Шляпа", type: "item", price: 750, chance: 1.5, icon: "🎩", isImg: false }
                 ]
             }
         ];
 
-        // Сортируем содержимое кейса по возрастанию цены
+        // Сортировка дропа в кейсе от дешевых к дорогим
         casesList.forEach(c => {
             c.drops.sort((a, b) => a.price - b.price);
         });
@@ -997,7 +997,7 @@
             const grid = document.getElementById('inventoryGrid');
             const sellAllBtn = document.getElementById('sellAllBtn');
 
-            // Сортируем инвентарь по цене от меньшей к большей
+            // Сортировка инвентаря игрока от дешевых к дорогим
             state.inventory.sort((a, b) => a.price - b.price);
 
             if (state.inventory.length === 0) {
@@ -1777,9 +1777,9 @@
         function calculateChance() {
             if (!upgradeState.sourceItem || !upgradeState.targetItem) return 50;
             let ch = (upgradeState.sourceItem.price / upgradeState.targetItem.price) * 100;
-            // Уменьшаем шансы (делаем сложнее примерно на 15-20%)
-            let adjustedCh = ch * 0.82;
-            return Math.min(90, Math.max(3, Math.round(adjustedCh)));
+            // Уменьшаем шансы еще сильнее для баланса
+            let adjustedCh = ch * 0.75;
+            return Math.min(85, Math.max(2, Math.round(adjustedCh)));
         }
 
         function renderUpgradeScreen(container) {
@@ -1844,7 +1844,7 @@
                 if (state.inventory.length === 0) {
                     list.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px;">Инвентарь пуст. Купите что-то в магазине!</div>`;
                 } else {
-                    // Инвентарь уже отсортирован
+                    // Инвентарь отсортирован по цене
                     state.inventory.forEach((item, index) => {
                         const row = document.createElement('div');
                         row.className = 'modal-item-row';
