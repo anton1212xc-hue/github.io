@@ -191,25 +191,22 @@
             margin-bottom: 8px;
         }
 
-        /* MULTI-ROULETTE CONTAINER */
+        /* MULTI-ROULETTE CONTAINER (COMPACT TO FIT ALL ON SCREEN) */
         .roulette-wrapper {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 5px;
             width: 100%;
             max-width: 340px;
-            margin: 10px 0;
-            max-height: 250px;
-            overflow-y: auto;
-            padding-right: 2px;
+            margin: 6px 0;
         }
         .roulette-container {
             position: relative;
             width: 100%;
-            height: 85px;
+            height: 62px;
             background: #182030;
             border: 2px solid var(--accent);
-            border-radius: 14px;
+            border-radius: 10px;
             overflow: hidden;
             flex-shrink: 0;
         }
@@ -218,11 +215,11 @@
             top: 0;
             left: 50%;
             transform: translateX(-50%);
-            width: 3px;
+            width: 2px;
             height: 100%;
             background: var(--accent);
             z-index: 10;
-            box-shadow: 0 0 8px var(--accent);
+            box-shadow: 0 0 6px var(--accent);
         }
         .roulette-track {
             display: flex;
@@ -233,7 +230,7 @@
             will-change: transform;
         }
         .roulette-item {
-            min-width: 80px;
+            min-width: 65px;
             height: 100%;
             background: var(--card-bg);
             border-right: 1px solid var(--card-border);
@@ -241,7 +238,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 6px;
+            padding: 3px;
             text-align: center;
         }
 
@@ -1172,7 +1169,6 @@
             updateUI();
             await saveCloud();
 
-            // Генерируем выпавшие призы для каждого кейса
             let wonDrops = [];
             for (let i = 0; i < count; i++) {
                 wonDrops.push(rollDrop(caseObj.drops));
@@ -1180,7 +1176,6 @@
 
             const body = document.getElementById('gameContentBody');
 
-            // Формируем HTML для нескольких рулеток
             let roulettesHtml = '';
             for (let i = 0; i < count; i++) {
                 let rouletteItems = [];
@@ -1188,12 +1183,12 @@
                     rouletteItems.push(rollDrop(caseObj.drops));
                 }
                 let winningIndex = 28;
-                rouletteItems[winningIndex] = wonDrops[i]; // Ставим точный приз для этой ленты
+                rouletteItems[winningIndex] = wonDrops[i];
 
                 let trackHtml = rouletteItems.map(item => `
                     <div class="roulette-item">
-                        <div style="font-size: 24px; margin-bottom: 2px;">${item.icon}</div>
-                        <div style="font-size: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">${item.name}</div>
+                        <div style="font-size: 20px; margin-bottom: 1px;">${item.icon}</div>
+                        <div style="font-size: 9px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">${item.name}</div>
                     </div>
                 `).join('');
 
@@ -1208,26 +1203,25 @@
             }
 
             body.innerHTML = `
-                <div style="width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
-                    <div style="font-size: 15px; font-weight: 800;">Открытие кейсов (${count} шт)... 🎁</div>
+                <div style="width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                    <div style="font-size: 14px; font-weight: 800;">Открытие кейсов (${count} шт)... 🎁</div>
                     <div class="roulette-wrapper">
                         ${roulettesHtml}
                     </div>
-                    <div style="font-size: 12px; color: var(--text-muted);">Крутим рулетки...</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">Крутим рулетки...</div>
                 </div>
             `;
 
-            // Запускаем плавную анимацию для каждой ленты с небольшой случайной погрешностью
             setTimeout(() => {
                 for (let i = 0; i < count; i++) {
                     const track = document.getElementById(`rouletteTrack_${i}`);
                     if (!track) continue;
 
-                    const itemWidth = 80;
+                    const itemWidth = 65;
                     const containerCenter = 170;
                     let winningIndex = 28;
                     
-                    const targetOffset = (winningIndex * itemWidth) - containerCenter + (itemWidth / 2) + (Math.random() * 20 - 10);
+                    const targetOffset = (winningIndex * itemWidth) - containerCenter + (itemWidth / 2) + (Math.random() * 15 - 7);
                     
                     track.style.transition = `transform ${3.2 + i * 0.15}s cubic-bezier(0.15, 0.85, 0.15, 1)`;
                     track.style.transform = `translateX(-${targetOffset}px)`;
@@ -1249,7 +1243,7 @@
                     updateUI();
                     await saveCloud();
 
-                    let resultsHtml = wonItemsSummary.map(item => `<div style="background:rgba(255,255,255,0.05); padding:7px 12px; border-radius:10px; font-weight:700; margin-bottom:4px; font-size:13px;">${item}</div>`).join('');
+                    let resultsHtml = wonItemsSummary.map(item => `<div style="background:rgba(255,255,255,0.05); padding:6px 12px; border-radius:10px; font-weight:700; margin-bottom:4px; font-size:12px;">${item}</div>`).join('');
 
                     body.innerHTML = `
                         <div style="width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 12px;">
