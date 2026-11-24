@@ -605,7 +605,8 @@
             display: none;
             flex-direction: column;
             height: 100%;
-            padding: 10px;
+            padding: 14px;
+            align-items: flex-start;
         }
         .game-screen.active { display: flex; }
         .back-btn {
@@ -616,8 +617,7 @@
             border-radius: 10px;
             font-weight: 600;
             cursor: pointer;
-            align-self: flex-start;
-            margin-bottom: 12px;
+            margin-bottom: 14px;
         }
     </style>
 </head>
@@ -719,7 +719,7 @@
         <!-- INDIVIDUAL GAME SCREENS -->
         <div id="game-screen-container" class="game-screen">
             <button class="back-btn" onclick="closeGame()">← Назад</button>
-            <div id="gameContentBody" style="display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; text-align:center;">
+            <div id="gameContentBody" style="display:flex; flex-direction:column; align-items:center; width:100%; flex:1;">
                 <!-- Динамический контент активной игры -->
             </div>
         </div>
@@ -795,7 +795,6 @@
         };
 
         const shopItems = [
-            // Прошлые предметы
             { id: 1, name: "Роза", price: 25, icon: "🌹", isImg: false },
             { id: 2, name: "Шампанское", price: 50, icon: "🍾", isImg: false },
             { id: 3, name: "Кольцо", price: 100, icon: "💍", isImg: false },
@@ -815,8 +814,6 @@
             { id: 17, name: "Яхта Модель", price: 20000, icon: "🛥️", isImg: false },
             { id: 18, name: "Частный Самолет", price: 35000, icon: "✈️", isImg: false },
             { id: 19, name: "Космическая Ракета", price: 50000, icon: "🚀", isImg: false },
-            
-            // Новые предметы
             { id: 20, name: "Статуя", price: 500, icon: "🗽", isImg: false },
             { id: 21, name: "Факел", price: 350, icon: "🔦", isImg: false },
             { id: 22, name: "х2 кольцо", price: 200, icon: "💍", isImg: false },
@@ -840,13 +837,12 @@
             { id: 40, name: "Instant Pamen", price: 400, icon: "🍜", isImg: false }
         ];
 
-        // Список кейсов
         const casesList = [
             {
                 id: 'bear',
                 name: 'Bear',
                 price: 149,
-                image: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=' , // Аватарка Bear кейса
+                image: 'https://i.ibb.co/3ykG8v0K/179702.jpg',
                 drops: [
                     { name: "5 звёзд", type: "stars", amount: 5, chance: 75, icon: "⭐" },
                     { name: "Статуя", type: "item", price: 500, chance: 5, icon: "🗽", isImg: false },
@@ -916,7 +912,6 @@
             }
         }
 
-        // Shop & Inventory logic
         function renderShop() {
             const grid = document.getElementById('shopGrid');
             grid.innerHTML = '';
@@ -977,7 +972,6 @@
             alert(`Предмет продан за ${item.price} ⭐`);
         }
 
-        // Admin Panel Logic
         function loginAdmin() {
             const pass = document.getElementById('adminPass').value;
             if (pass === "krutoi") {
@@ -1017,7 +1011,6 @@
             }
         }
 
-        // GAMES & CASES
         function openGame(type) {
             document.querySelectorAll('.tab-content').forEach(e => e.classList.remove('active'));
             document.querySelector('.nav-bar').style.display = 'none';
@@ -1045,13 +1038,12 @@
             document.querySelector('.nav-bar').style.display = 'flex';
         }
 
-        // --- CASES LOBBY & OPENING ---
         function renderCasesLobby(container) {
             let casesHtml = '';
             casesList.forEach(c => {
                 casesHtml += `
                     <div class="case-card" onclick="openCaseModal('${c.id}')">
-                        <img src="https://i.ibb.co/3ykG8v0K/179702.jpg" class="case-img" alt="${c.name}">
+                        <img src="${c.image}" class="case-img" alt="${c.name}">
                         <div style="font-size: 14px; font-weight: 800; margin-bottom: 2px;">${c.name}</div>
                         <div style="font-size: 12px; color: var(--accent); font-weight: 700;">⭐ ${c.price}</div>
                     </div>
@@ -1085,8 +1077,7 @@
 
             body.innerHTML = `
                 <div style="width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 14px;">
-                    <button class="back-btn" onclick="openGame('cases')" style="align-self: flex-start; margin-bottom: 0;">← К списку кейсов</button>
-                    <img src="https://i.ibb.co/3ykG8v0K/179702.jpg" style="width: 100px; height: 100px; object-fit: contain;" alt="${caseObj.name}">
+                    <img src="${caseObj.image}" style="width: 100px; height: 100px; object-fit: contain;" alt="${caseObj.name}">
                     <div style="font-size: 18px; font-weight: 800;">Кейс ${caseObj.name}</div>
                     <div style="font-size: 13px; color: var(--text-muted);">Цена за 1 шт: <strong style="color:var(--accent);">${caseObj.price} ⭐</strong></div>
 
