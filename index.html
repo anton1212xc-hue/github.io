@@ -352,6 +352,10 @@
             animation: shake 0.3s ease-in-out infinite;
             border-color: var(--danger);
         }
+        .egg-item.opened {
+            cursor: default;
+            opacity: 0.75;
+        }
         @keyframes shake {
             0% { transform: rotate(0deg); }
             25% { transform: rotate(-5deg); }
@@ -979,7 +983,7 @@
         </button>
     </div>
 
-    <!-- MANDATORY NICKNAME MODAL (FOR NEW PLAYERS OR "Игрок") -->
+    <!-- MANDATORY NICKNAME MODAL -->
     <div class="modal-overlay" id="nicknameModal">
         <div class="modal" onclick="event.stopPropagation()">
             <h3>Добро пожаловать в Gorilla Case 🦍</h3>
@@ -1021,6 +1025,17 @@
         </div>
     </div>
 
+    <!-- EGGS PRIZE RESULT MODAL -->
+    <div class="modal-overlay" id="eggsResultModal">
+        <div class="modal" onclick="event.stopPropagation()">
+            <h3>🎉 Вы выиграли в яйце!</h3>
+            <div id="eggsResultContent" style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 10px 0;">
+                <!-- Динамический выигрыш -->
+            </div>
+            <button class="btn" onclick="closeEggsResultAndReturn()">К выбору яиц 🥚</button>
+        </div>
+    </div>
+
     <script>
         const FIREBASE_URL = "https://idjdjdj-default-rtdb.firebaseio.com";
         let tg = window.Telegram?.WebApp;
@@ -1031,7 +1046,6 @@
 
         let soundEnabled = localStorage.getItem('gorilla_sound') !== 'false';
 
-        // Получаем ник и аватарку из Telegram WebApp / Шузаграм
         let tgUser = tg?.initDataUnsafe?.user;
         let telegramName = tgUser?.first_name || (tgUser?.username ? `@${tgUser.username}` : "Игрок");
         let telegramPhoto = tgUser?.photo_url || "";
@@ -1310,7 +1324,6 @@
                 }
             } catch(e) {}
 
-            // Проверяем, если ник "Игрок" или пустой дефолтный - просим ввести ник
             if (!state.user.name || state.user.name === "Игрок" || state.user.name.trim() === "") {
                 document.getElementById('nicknameModal').classList.add('open');
             }
@@ -1594,7 +1607,7 @@
             document.querySelector('.nav-bar').style.display = 'flex';
         }
 
-        // --- REAL SYNCHRONIZED PVP (LIVE FIREBASE BETS & ROTATING NEEDLE WHEEL) ---
+        // --- REAL SYNCHRONIZED PVP ---
         let pvpState = {
             syncInterval: null,
             players: [],
@@ -1908,7 +1921,7 @@
             }, 100);
         }
 
-        // --- EGGS GAME LOGIC ---
+        // --- FIXED EGGS GAME LOGIC ---
         let eggsState = {
             count: 3,
             price: 500,
@@ -2051,23 +2064,42 @@
             updateUI();
             await saveCloud();
 
+            // Блокируем ВСЕ яйца после вскрытия, чтобы нельзя было кликнуть повторно
             for (let i = 0; i < eggsState.count; i++) {
+                const otherEl = document.getElementById(`egg_${i}`);
+                otherEl.classList.add('opened');
+                otherEl.style.pointerEvents = 'none';
                 if (i !== index) {
-                    const otherEl = document.getElementById(`egg_${i}`);
-                    otherEl.style.opacity = '0.5';
-                    otherEl.style.pointerEvents = 'none';
-                    let otherPrize = eggsState.prizes[i];
-                    otherEl.innerText = otherPrize.icon;
+                    otherEl.style.opacity = '0.4';
+                    otherEl.innerText = eggsState.prizes[i].icon;
                 }
             }
 
             eggEl.classList.remove('crack');
             eggEl.style.borderColor = 'var(--success)';
 
+            // Показываем всплывающее окно результата
             setTimeout(() => {
-                alert(`🎉 Поздравляем! Вы выиграли: ${prize.name} (${prize.price} ⭐)`);
-                eggsState.isOpening = false;
+                showEggsResultModal(prize);
             }, 300);
+        }
+
+        function showEggsResultModal(prize) {
+            const content = document.getElementById('eggsResultContent');
+            const iconHtml = prize.isImg ? `<img src="${prize.icon}" style="width:48px;height:48px;object-fit:contain;">` : `<span style="font-size:50px;">${prize.icon}</span>`;
+            
+            content.innerHTML = `
+                ${iconHtml}
+                <div style="font-size: 16px; font-weight: 800; color: #fff; margin-top: 4px;">${prize.name}</div>
+                <div style="font-size: 13px; color: var(--accent); font-weight: 700;">Ценность: ⭐ ${prize.price}</div>
+            `;
+            document.getElementById('eggsResultModal').classList.add('open');
+        }
+
+        function closeEggsResultAndReturn() {
+            document.getElementById('eggsResultModal').classList.remove('open');
+            eggsState.isOpening = false;
+            openGame('eggs'); // Сразу перекидывает в меню покупки/выбора яиц
         }
 
         function renderCasesLobby(container) {
@@ -2822,7 +2854,7 @@
             btn.style.background = "var(--primary-btn)";
         }
 
-        // --- UPGRADE GAME STATE & RENDER (WITH ANTI-DUP SYSTEM) ---
+        // --- UPGRADE GAME STATE & RENDER ---
         let upgradeState = {
             sourceItem: null,
             targetItem: null,
