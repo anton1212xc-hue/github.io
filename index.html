@@ -184,14 +184,16 @@
             transition: transform 0.1s;
         }
         .case-card:active { transform: scale(0.97); }
-        .case-img {
-            width: 75px;
-            height: 75px;
-            object-fit: contain;
+        .case-emoji-icon {
+            font-size: 50px;
             margin-bottom: 8px;
+            height: 75px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        /* MULTI-ROULETTE CONTAINER (COMPACT TO FIT ALL ON SCREEN) */
+        /* MULTI-ROULETTE CONTAINER */
         .roulette-wrapper {
             display: flex;
             flex-direction: column;
@@ -739,7 +741,10 @@
 
         <!-- INVENTORY TAB -->
         <div id="tab-inventory" class="tab-content">
-            <div class="section-title">Ваш инвентарь</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div class="section-title" style="margin-bottom: 0;">Ваш инвентарь</div>
+                <button class="btn" id="sellAllBtn" style="width: auto; padding: 6px 12px; font-size: 11px; background: var(--danger); display: none;" onclick="sellAllItems()">Продать всё 🔥</button>
+            </div>
             <div class="inventory-grid" id="inventoryGrid"></div>
         </div>
 
@@ -893,15 +898,15 @@
                 id: 'bear',
                 name: 'Bear',
                 price: 149,
-                image: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=',
+                emojiIcon: '🧸',
                 drops: [
-                    { name: "5 звёзд", type: "stars", amount: 5, chance: 75, icon: "⭐" },
-                    { name: "Статуя", type: "item", price: 500, chance: 5, icon: "🗽", isImg: false },
-                    { name: "Шляпа", type: "item", price: 750, chance: 1, icon: "🎩", isImg: false },
-                    { name: "Fine pen", type: "item", price: 670, chance: 3, icon: "🖊️", isImg: false },
-                    { name: "Instant Pamen", type: "item", price: 400, chance: 6, icon: "🍜", isImg: false },
-                    { name: "Mirage Lamp", type: "item", price: 460, chance: 5, icon: "🏮", isImg: false },
-                    { name: "Ice cream", type: "item", price: 410, chance: 5, icon: "🍦", isImg: false }
+                    { name: "5 звёзд", type: "stars", amount: 5, chance: 82.0, icon: "⭐" },
+                    { name: "Статуя", type: "item", price: 500, chance: 9.0, icon: "🗽", isImg: false },
+                    { name: "Шляпа", type: "item", price: 750, chance: 1.5, icon: "🎩", isImg: false },
+                    { name: "Fine pen", type: "item", price: 670, chance: 2.5, icon: "🖊️", isImg: false },
+                    { name: "Instant Pamen", type: "item", price: 400, chance: 1.0, icon: "🍜", isImg: false },
+                    { name: "Mirage Lamp", type: "item", price: 460, chance: 2.0, icon: "🏮", isImg: false },
+                    { name: "Ice cream", type: "item", price: 410, chance: 2.0, icon: "🍦", isImg: false }
                 ]
             }
         ];
@@ -982,10 +987,15 @@
 
         function renderInventory() {
             const grid = document.getElementById('inventoryGrid');
+            const sellAllBtn = document.getElementById('sellAllBtn');
+
             if (state.inventory.length === 0) {
+                sellAllBtn.style.display = 'none';
                 grid.innerHTML = `<div style="grid-column: span 2; text-align:center; color:var(--text-muted); padding:30px;">Инвентарь пуст. Купите предметы в магазине!</div>`;
                 return;
             }
+
+            sellAllBtn.style.display = 'block';
             grid.innerHTML = '';
             state.inventory.forEach((item, index) => {
                 const card = document.createElement('div');
@@ -1021,6 +1031,19 @@
             updateUI();
             await saveCloud();
             alert(`Предмет продан за ${item.price} ⭐`);
+        }
+
+        async function sellAllItems() {
+            if (state.inventory.length === 0) return;
+            let totalEarned = 0;
+            state.inventory.forEach(item => {
+                totalEarned += item.price;
+            });
+            state.balance += totalEarned;
+            state.inventory = [];
+            updateUI();
+            await saveCloud();
+            alert(`Всё продано! Вы получили ${totalEarned} ⭐`);
         }
 
         function loginAdmin() {
@@ -1094,7 +1117,7 @@
             casesList.forEach(c => {
                 casesHtml += `
                     <div class="case-card" onclick="openCaseModal('${c.id}')">
-                        <img src="${c.image}" class="case-img" alt="${c.name}">
+                        <div class="case-emoji-icon">${c.emojiIcon}</div>
                         <div style="font-size: 14px; font-weight: 800; margin-bottom: 2px;">${c.name}</div>
                         <div style="font-size: 12px; color: var(--accent); font-weight: 700;">⭐ ${c.price}</div>
                     </div>
@@ -1128,7 +1151,7 @@
 
             body.innerHTML = `
                 <div style="width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 14px;">
-                    <img src="${caseObj.image}" style="width: 100px; height: 100px; object-fit: contain;" alt="${caseObj.name}">
+                    <div style="font-size: 64px; height: 90px; display: flex; align-items: center; justify-content: center;">${caseObj.emojiIcon}</div>
                     <div style="font-size: 18px; font-weight: 800;">Кейс ${caseObj.name}</div>
                     <div style="font-size: 13px; color: var(--text-muted);">Цена за 1 шт: <strong style="color:var(--accent);">${caseObj.price} ⭐</strong></div>
 
