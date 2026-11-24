@@ -191,6 +191,50 @@
             margin-bottom: 8px;
         }
 
+        /* CASE OPENING ROULLETE ANIMATION */
+        .roulette-container {
+            position: relative;
+            width: 100%;
+            max-width: 340px;
+            height: 120px;
+            background: #182030;
+            border: 2px solid var(--accent);
+            border-radius: 16px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+        .roulette-pointer {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 100%;
+            background: var(--accent);
+            z-index: 10;
+            box-shadow: 0 0 10px var(--accent);
+        }
+        .roulette-track {
+            display: flex;
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            will-change: transform;
+        }
+        .roulette-item {
+            min-width: 90px;
+            height: 100%;
+            background: var(--card-bg);
+            border-right: 1px solid var(--card-border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            text-align: center;
+        }
+
         /* UPGRADE MODULE STYLES */
         .upgrade-container {
             display: flex;
@@ -842,7 +886,7 @@
                 id: 'bear',
                 name: 'Bear',
                 price: 149,
-                image: 'https://i.ibb.co/3ykG8v0K/179702.jpg',
+                image: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=',
                 drops: [
                     { name: "5 звёзд", type: "stars", amount: 5, chance: 75, icon: "⭐" },
                     { name: "Статуя", type: "item", price: 500, chance: 5, icon: "🗽", isImg: false },
@@ -1087,9 +1131,9 @@
                     </div>
 
                     <div style="display: flex; gap: 8px; width: 100%; margin-top: 10px;">
-                        <button class="btn" onclick="buyAndOpenCase('${caseObj.id}', 1)">Открыть 1 (⭐${caseObj.price})</button>
-                        <button class="btn" style="background:var(--success);" onclick="buyAndOpenCase('${caseObj.id}', 3)">Открыть 3 (⭐${caseObj.price * 3})</button>
-                        <button class="btn" style="background:var(--accent); color:#000;" onclick="buyAndOpenCase('${caseObj.id}', 5)">Открыть 5 (⭐${caseObj.price * 5})</button>
+                        <button class="btn" id="open1Btn" onclick="startCaseOpening('${caseObj.id}', 1)">Открыть 1 (⭐${caseObj.price})</button>
+                        <button class="btn" id="open3Btn" style="background:var(--success);" onclick="startCaseOpening('${caseObj.id}', 3)">Открыть 3 (⭐${caseObj.price * 3})</button>
+                        <button class="btn" id="open5Btn" style="background:var(--accent); color:#000;" onclick="startCaseOpening('${caseObj.id}', 5)">Открыть 5 (⭐${caseObj.price * 5})</button>
                     </div>
                 </div>
             `;
@@ -1105,7 +1149,7 @@
             return drops[0];
         }
 
-        async function buyAndOpenCase(caseId, count) {
+        async function startCaseOpening(caseId, count) {
             const caseObj = casesList.find(c => c.id === caseId);
             const totalCost = caseObj.price * count;
 
@@ -1115,36 +1159,91 @@
             }
 
             state.balance -= totalCost;
-            let wonItemsSummary = [];
-
-            for (let i = 0; i < count; i++) {
-                let drop = rollDrop(caseObj.drops);
-                if (drop.type === 'stars') {
-                    state.balance += drop.amount;
-                    wonItemsSummary.push(`⭐ ${drop.amount} звёзд`);
-                } else {
-                    let newItem = { name: drop.name, price: drop.price, icon: drop.icon, isImg: drop.isImg, uid: Date.now() + Math.random() + i };
-                    state.inventory.push(newItem);
-                    wonItemsSummary.push(`${drop.icon} ${drop.name} (${drop.price} ⭐)`);
-                }
-            }
-
             updateUI();
             await saveCloud();
 
-            const body = document.getElementById('gameContentBody');
-            let resultsHtml = wonItemsSummary.map(item => `<div style="background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:10px; font-weight:700; margin-bottom:5px;">${item}</div>`).join('');
+            // Генерируем выпавшие призы
+            let wonDrops = [];
+            for (let i = 0; i < count; i++) {
+                wonDrops.push(rollDrop(caseObj.drops));
+            }
 
+            // Отключаем кнопки на время анимации
+            document.querySelectorAll('#gameContentBody button').forEach(b => b.disabled = true);
+
+            // Генерируем элементы для рулетки (ленты)
+            let rouletteItems = [];
+            for (let i = 0; i < 35; i++) {
+                rouletteItems.push(rollDrop(caseObj.drops));
+            }
+            // Ставим выигранный приз (или первый из них) ровно на нужную позицию (например, 28-й элемент)
+            let winningIndex = 28;
+            rouletteItems[winningIndex] = wonDrops[0];
+
+            let trackHtml = rouletteItems.map(item => `
+                <div class="roulette-item">
+                    <div style="font-size: 28px; margin-bottom: 4px;">${item.icon}</div>
+                    <div style="font-size: 11px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">${item.name}</div>
+                </div>
+            `).join('');
+
+            const body = document.getElementById('gameContentBody');
             body.innerHTML = `
                 <div style="width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 14px;">
-                    <div style="font-size: 20px; font-weight: 800; color: var(--accent);">🎉 Вы выиграли!</div>
-                    <div style="width: 100%; max-height: 250px; overflow-y: auto;">
-                        ${resultsHtml}
+                    <div style="font-size: 16px; font-weight: 800;">Открытие кейса... 🎁</div>
+                    <div class="roulette-container" id="rouletteContainer">
+                        <div class="roulette-pointer"></div>
+                        <div class="roulette-track" id="rouletteTrack" style="transform: translateX(0px);">
+                            ${trackHtml}
+                        </div>
                     </div>
-                    <button class="btn" onclick="openCaseModal('${caseObj.id}')">Открыть еще</button>
-                    <button class="btn" style="background:var(--card-border);" onclick="openGame('cases')">К списку кейсов</button>
+                    <div style="font-size: 13px; color: var(--text-muted);">Крутим рулетку...</div>
                 </div>
             `;
+
+            // Запускаем плавную анимацию прокрутки рулетки
+            setTimeout(() => {
+                const track = document.getElementById('rouletteTrack');
+                const itemWidth = 90; // ширина одного блока .roulette-item
+                const containerCenter = 170; // половина ширины .roulette-container (340 / 2)
+                
+                // Смещаем так, чтобы выигранный элемент встал строго по центру под указатель
+                const targetOffset = (winningIndex * itemWidth) - containerCenter + (itemWidth / 2);
+                
+                track.style.transition = 'transform 3.5s cubic-bezier(0.15, 0.85, 0.15, 1)';
+                track.style.transform = `translateX(-${targetOffset}px)`;
+
+                setTimeout(async () => {
+                    // Зачисляем призы в инвентарь / баланс
+                    let wonItemsSummary = [];
+                    for (let drop of wonDrops) {
+                        if (drop.type === 'stars') {
+                            state.balance += drop.amount;
+                            wonItemsSummary.push(`⭐ ${drop.amount} звёзд`);
+                        } else {
+                            let newItem = { name: drop.name, price: drop.price, icon: drop.icon, isImg: drop.isImg, uid: Date.now() + Math.random() };
+                            state.inventory.push(newItem);
+                            wonItemsSummary.push(`${drop.icon} ${drop.name} (${drop.price} ⭐)`);
+                        }
+                    }
+
+                    updateUI();
+                    await saveCloud();
+
+                    let resultsHtml = wonItemsSummary.map(item => `<div style="background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:10px; font-weight:700; margin-bottom:5px;">${item}</div>`).join('');
+
+                    body.innerHTML = `
+                        <div style="width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 14px;">
+                            <div style="font-size: 20px; font-weight: 800; color: var(--accent);">🎉 Вы выиграли!</div>
+                            <div style="width: 100%; max-height: 250px; overflow-y: auto;">
+                                ${resultsHtml}
+                            </div>
+                            <button class="btn" onclick="openCaseModal('${caseObj.id}')">Открыть еще</button>
+                            <button class="btn" style="background:var(--card-border);" onclick="openGame('cases')">К списку кейсов</button>
+                        </div>
+                    `;
+                }, 3600);
+            }, 100);
         }
 
         // --- CUPS GAME LOGIC ---
