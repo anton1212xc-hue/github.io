@@ -125,6 +125,7 @@
         .game-banner.plane { background: linear-gradient(135deg, #881337, #4c0519); border-color: #be123c; }
         .game-banner.mines { background: linear-gradient(135deg, #7f1d1d, #450a0a); border-color: #ef4444; }
         .game-banner.plinko { background: linear-gradient(135deg, #701a75, #4a044e); border-color: #a855f7; }
+        .game-banner.pvp { background: linear-gradient(135deg, #1e3a8a, #172554); border-color: #3b82f6; }
 
         .game-title { font-size: 17px; font-weight: 800; margin-bottom: 3px; }
         .game-desc { font-size: 12px; color: var(--text-muted); }
@@ -391,6 +392,41 @@
             border-right: 5px solid transparent;
             border-bottom: 20px solid #fff;
             filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+        }
+
+        /* PVP REAL PLAYERS ROOM STYLES */
+        .pvp-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            max-width: 360px;
+        }
+        .pvp-timer-box {
+            background: var(--card-bg);
+            border: 2px solid var(--accent);
+            padding: 12px 20px;
+            border-radius: 16px;
+            text-align: center;
+            width: 100%;
+        }
+        .pvp-players-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+        .pvp-player-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--card-border);
+            padding: 10px 14px;
+            border-radius: 12px;
         }
 
         /* PLANE GAME STYLES */
@@ -756,6 +792,14 @@
                     <div class="game-icon">🥚</div>
                 </div>
 
+                <div class="game-banner pvp" onclick="openGame('pvp')">
+                    <div>
+                        <div class="game-title">PvP Битва ⚔️</div>
+                        <div class="game-desc">Ставки предметами каждые 60 секунд с реальными игроками</div>
+                    </div>
+                    <div class="game-icon">🛡️</div>
+                </div>
+
                 <div class="game-banner upgrade" onclick="openGame('upgrade')">
                     <div>
                         <div class="game-title">Апгрейд</div>
@@ -895,7 +939,7 @@
         </div>
     </div>
 
-    <!-- Select Item Modal for Upgrade -->
+    <!-- Select Item Modal (For Upgrade & PvP) -->
     <div class="modal-overlay" id="selectModal" onclick="closeModal('selectModal', event)">
         <div class="modal" onclick="event.stopPropagation()">
             <h3 id="selectModalTitle">Выберите предмет</h3>
@@ -1261,7 +1305,7 @@
 
             if (state.inventory.length === 0) {
                 sellAllBtn.style.display = 'none';
-                grid.innerHTML = `<div style="grid-column: span 2; text-align:center; color:var(--text-muted); padding:30px;">Инвентарь пуст. Купите что-то в магазине!</div>`;
+                grid.innerHTML = `<div style="grid-column: span 2; text-align:center; color:var(--text-muted); padding:30px;">Инвентарь пуст. Выбивайте призы из кейсов и яиц!</div>`;
                 return;
             }
 
@@ -1396,6 +1440,8 @@
                 renderCasesLobby(body);
             } else if (type === 'eggs') {
                 renderEggsLobby(body);
+            } else if (type === 'pvp') {
+                initPvpScreen(body);
             } else if (type === 'upgrade') {
                 renderUpgradeScreen(body);
             } else if (type === 'plane') {
@@ -1408,10 +1454,287 @@
         }
 
         function closeGame() {
-            if (planeState.isPlaying || minesState.isPlaying || eggsState.isOpening || plinkoState.isPlaying) return;
+            if (planeState.isPlaying || minesState.isPlaying || eggsState.isOpening || plinkoState.isPlaying || pvpState.isRolling) return;
             document.getElementById('game-screen-container').classList.remove('active');
             document.getElementById('tab-games').classList.add('active');
             document.querySelector('.nav-bar').style.display = 'flex';
+        }
+
+        // --- PVP REAL PLAYERS ROOM LOGIC (КАЖДУЮ МИНУТУ ИГРЫ) ---
+        let pvpState = {
+            timeLeft: 60,
+            timerInterval: null,
+            players: [], // Список участников {name, item, price, isUser}
+            hasJoined: false,
+            userBetItem: null,
+            isRolling: false
+        };
+
+        const botNamesPool = ["CryptoKing", "Sasha_Ton", "DurovFan", "StarLord", "GorillaBoss", "TonHolder", "MisterX", "MoonBoy", "DiamondHands"];
+
+        async function initPvpScreen(container) {
+            if (!pvpState.timerInterval) {
+                // Инициализируем случайных соперников в лобби
+                generatePvpLobbyBots();
+                startPvpGlobalTimer();
+            }
+            renderPvpScreen(container);
+        }
+
+        function generatePvpLobbyBots() {
+            pvpState.players = [];
+            // Добавим 2-4 случайных ботов-соперников с предметами
+            let botCount = 2 + Math.floor(Math.random() * 3);
+            let shuffledNames = [...botNamesPool].sort(() => 0.5 - Math.random());
+
+            for (let i = 0; i < botCount; i++) {
+                let randomShopItem = shopItems[Math.floor(Math.random() * shopItems.length)];
+                pvpState.players.push({
+                    name: shuffledNames[i],
+                    item: randomShopItem,
+                    price: randomShopItem.price,
+                    isUser: false
+                });
+            }
+        }
+
+        function startPvpGlobalTimer() {
+            if (pvpState.timerInterval) clearInterval(pvpState.timerInterval);
+            pvpState.timeLeft = 60;
+            pvpState.hasJoined = false;
+            pvpState.userBetItem = null;
+
+            pvpState.timerInterval = setInterval(() => {
+                pvpState.timeLeft--;
+                
+                const timerEl = document.getElementById('pvpTimerText');
+                if (timerEl) timerEl.innerText = pvpState.timeLeft;
+
+                if (pvpState.timeLeft <= 0) {
+                    clearInterval(pvpState.timerInterval);
+                    triggerPvpRoll();
+                }
+            }, 1000);
+        }
+
+        function renderPvpScreen(container) {
+            let totalBank = pvpState.players.reduce((sum, p) => sum + p.price, 0);
+
+            let playersHtml = pvpState.players.map(p => `
+                <div class="pvp-player-row">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:20px;">${p.item.icon}</span>
+                        <div>
+                            <div style="font-weight:700; font-size:13px; color:${p.isUser ? 'var(--accent)' : '#fff'};">${p.name} ${p.isUser ? '(Вы)' : ''}</div>
+                            <div style="font-size:11px; color:var(--text-muted);">${p.item.name}</div>
+                        </div>
+                    </div>
+                    <div style="font-weight:800; font-size:13px; color:var(--accent);">⭐ ${p.price}</div>
+                </div>
+            `).join('');
+
+            container.innerHTML = `
+                <div class="pvp-container" id="pvpMainContainer">
+                    <div style="font-size: 16px; font-weight: 800;">⚔️ Live PvP Битва</div>
+                    <div style="font-size: 11px; color: var(--text-muted); text-align: center;">
+                        Катка каждые 60 секунд! Успейте поставить предмет. Победитель забирает весь банк!
+                    </div>
+
+                    <div class="pvp-timer-box">
+                        <div style="font-size: 12px; color: var(--text-muted);">До начала розыгрыша:</div>
+                        <div style="font-size: 26px; font-weight: 900; color: var(--accent);"><span id="pvpTimerText">${pvpState.timeLeft}</span> сек</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Общий банк: <strong style="color:var(--success);">⭐ ${totalBank}</strong></div>
+                    </div>
+
+                    <div style="width: 100%; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 12px; font-weight: 700; color: var(--text-muted);">Участники (${pvpState.players.length}):</span>
+                    </div>
+
+                    <div class="pvp-players-list">
+                        ${playersHtml.length > 0 ? playersHtml : '<div style="text-align:center; color:var(--text-muted); padding:20px;">Пока нет ставок. Будьте первыми!</div>'}
+                    </div>
+
+                    ${!pvpState.hasJoined ? `
+                        <button class="btn" style="background: var(--success);" onclick="openPvpItemSelector()">ПОСТАВИТЬ ПРЕДМЕТ ⭐</button>
+                    ` : `
+                        <div style="background: rgba(34, 197, 94, 0.15); border: 1px solid var(--success); padding: 10px; border-radius: 12px; text-align: center; width: 100%; font-size: 13px; font-weight: 700; color: var(--success);">
+                            ✅ Вы сделали ставку! Ожидаем конца раунда...
+                        </div>
+                    `}
+                </div>
+            `;
+        }
+
+        function openPvpItemSelector() {
+            if (state.inventory.length === 0) {
+                alert("У вас нет предметов в инвентаре! Выбивайте их из кейсов или яиц.");
+                return;
+            }
+
+            const modal = document.getElementById('selectModal');
+            const list = document.getElementById('modalItemsList');
+            const title = document.getElementById('selectModalTitle');
+            title.innerText = "Выберите предмет для ставки в PvP";
+            list.innerHTML = '';
+
+            state.inventory.forEach((item, index) => {
+                const row = document.createElement('div');
+                row.className = 'modal-item-row';
+                const rowIcon = item.isImg ? `<img src="${item.icon}" style="width:28px;height:28px;object-fit:contain;">` : `<span style="font-size:22px;">${item.icon}</span>`;
+                row.innerHTML = `<div style="display:flex; align-items:center; gap:10px;">${rowIcon}<div><div style="font-weight:700; font-size:13px;">${item.name}</div><div style="font-size:11px; color:var(--accent);">⭐ ${item.price}</div></div></div>`;
+                row.onclick = () => {
+                    selectItemForPvp(index);
+                    closeModal('selectModal');
+                };
+                list.appendChild(row);
+            });
+
+            modal.classList.add('open');
+        }
+
+        async function selectItemForPvp(inventoryIndex) {
+            let chosenItem = state.inventory[inventoryIndex];
+            // Удаляем предмет из инвентаря игрока
+            state.inventory.splice(inventoryIndex, 1);
+            updateUI();
+            await saveCloud();
+
+            pvpState.hasJoined = true;
+            pvpState.userBetItem = chosenItem;
+
+            // Добавляем игрока в список участников PvP
+            pvpState.players.push({
+                name: state.user.name,
+                item: chosenItem,
+                price: chosenItem.price,
+                isUser: true
+            });
+
+            renderPvpScreen(document.getElementById('gameContentBody'));
+        }
+
+        async function triggerPvpRoll() {
+            pvpState.isRolling = true;
+            const container = document.getElementById('gameContentBody');
+
+            if (pvpState.players.length === 0) {
+                // Если никто не сделал ставку, просто пересоздаем таймер
+                generatePvpLobbyBots();
+                startPvpGlobalTimer();
+                renderPvpScreen(container);
+                pvpState.isRolling = false;
+                return;
+            }
+
+            // Вычисляем проценты и шансы на основе стоимости предметов (веса)
+            let totalBank = pvpState.players.reduce((sum, p) => sum + p.price, 0);
+            
+            // Формируем массив для круговой рулетки
+            let rouletteItems = [];
+            for (let i = 0; i < 40; i++) {
+                // Добавляем участников в рулетку пропорционально их стоимости
+                let randomPlayer = pvpState.players[Math.floor(Math.random() * pvpState.players.length)];
+                rouletteItems.push(randomPlayer);
+            }
+
+            // Определяем победителя рандомом на основе веса (процентов)
+            let winningRand = Math.random() * totalBank;
+            let currentSum = 0;
+            let winner = pvpState.players[0];
+
+            for (let p of pvpState.players) {
+                currentSum += p.price;
+                if (winningRand <= currentSum) {
+                    winner = p;
+                    break;
+                }
+            }
+
+            let winningIndex = 32;
+            rouletteItems[winningIndex] = winner;
+
+            let trackHtml = rouletteItems.map(p => `
+                <div class="roulette-item">
+                    <div style="font-size: 20px; margin-bottom: 1px;">${p.item.icon}</div>
+                    <div style="font-size: 9px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">${p.name}</div>
+                </div>
+            `).join('');
+
+            container.innerHTML = `
+                <div style="width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                    <div style="font-size: 16px; font-weight: 800;">⚔️ Розыгрыш PvP банка!</div>
+                    <div style="font-size: 12px; color: var(--text-muted); text-align: center;">Рулетка крутится, определяется победитель...</div>
+                    
+                    <div class="roulette-wrapper" style="margin: 20px 0;">
+                        <div class="roulette-container" style="height: 80px;">
+                            <div class="roulette-pointer"></div>
+                            <div class="roulette-track" id="pvpRouletteTrack" style="transform: translateX(0px);">
+                                ${trackHtml}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            let tickCount = 0;
+            let tickInterval = setInterval(() => {
+                soundFX.rouletteTick();
+                tickCount++;
+                if (tickCount > 30) clearInterval(tickInterval);
+            }, 100);
+
+            setTimeout(() => {
+                const track = document.getElementById('pvpRouletteTrack');
+                if (track) {
+                    const itemWidth = 65;
+                    const containerCenter = 170;
+                    const targetOffset = (winningIndex * itemWidth) - containerCenter + (itemWidth / 2) + (Math.random() * 10 - 5);
+                    
+                    track.style.transition = `transform 3.5s cubic-bezier(0.15, 0.85, 0.15, 1)`;
+                    track.style.transform = `translateX(-${targetOffset}px)`;
+                }
+
+                setTimeout(async () => {
+                    soundFX.win();
+                    
+                    let resultMessage = "";
+                    if (winner.isUser) {
+                        // Если игрок выиграл, забираем все предметы банка в его инвентарь!
+                        pvpState.players.forEach(p => {
+                            state.inventory.push({
+                                name: p.item.name,
+                                price: p.item.price,
+                                icon: p.item.icon,
+                                isImg: p.item.isImg,
+                                uid: Date.now() + Math.random()
+                            });
+                        });
+                        resultMessage = `🎉 Поздравляем! Вы выиграли PvP раунд и забрали весь банк на сумму ⭐ ${totalBank}!`;
+                    } else {
+                        resultMessage = `😢 Победил игрок **${winner.name}**. Вы проиграли свою ставку.`;
+                    }
+
+                    updateUI();
+                    await saveCloud();
+
+                    container.innerHTML = `
+                        <div style="width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; padding-top: 20px;">
+                            <div style="font-size: 22px; font-weight: 900; color: ${winner.isUser ? 'var(--success)' : 'var(--danger)'};">
+                                ${winner.isUser ? 'ПОБЕДА В РАУНДЕ! 🏆' : 'ПОРАЖЕНИЕ 💀'}
+                            </div>
+                            <div style="font-size: 13px; color: var(--text-muted); line-height: 1.4;">
+                                Победитель: <strong style="color:var(--accent);">${winner.name}</strong>< выиграл банк ⭐ ${totalBank}
+                            </div>
+                            <button class="btn" onclick="openGame('pvp')">Следующий раунд ⚔️</button>
+                        </div>
+                    `;
+
+                    pvpState.isRolling = false;
+                    // Сбрасываем лобби для следующей минуты
+                    generatePvpLobbyBots();
+                    startPvpGlobalTimer();
+                }, 3800);
+            }, 100);
         }
 
         // --- EGGS GAME LOGIC ---
@@ -1757,7 +2080,7 @@
             }, 100);
         }
 
-        // --- PLINKO GAME LOGIC (ТЯЖЁЛЫЕ ШАРИКИ, ФИЗИКА ОТТАЛКИВАНИЯ, РЕДКИЙ 10X) ---
+        // --- PLINKO GAME LOGIC ---
         let plinkoState = {
             betPerBall: 100,
             ballsCount: 5,
@@ -1861,7 +2184,6 @@
 
             const board = document.getElementById('plinkoBoard');
             
-            // Собираем координаты всех штырьков на доске для физических столкновений
             let pegs = [];
             for (let row = 0; row < 5; row++) {
                 let pegsInRow = row + 3;
@@ -1883,16 +2205,14 @@
                 ball.className = 'plinko-ball';
                 board.appendChild(ball);
 
-                // Тяжёлый шарик с массой и динамическими силами
                 let x = 160 + (Math.random() * 16 - 8);
                 let y = 10;
                 let vx = (Math.random() - 0.5) * 1.5;
                 let vy = 0.5;
-                let radius = 7; // радиус шарика
+                let radius = 7;
 
                 await new Promise((resolve) => {
                     function animatePhysics() {
-                        // Гравитация и сопротивление воздуха (изменение скорости в полёте)
                         vy += 0.22; 
                         vx *= 0.985;
                         vy *= 0.99;
@@ -1900,7 +2220,6 @@
                         x += vx;
                         y += vy;
 
-                        // Столкновения со стенками доски (с отскоком)
                         if (x < radius + 4) {
                             x = radius + 4;
                             vx = -vx * 0.7;
@@ -1912,7 +2231,6 @@
                             soundFX.rouletteTick();
                         }
 
-                        // Столкновения со штырьками (настоящая физика отталкивания!)
                         for (let peg of pegs) {
                             let dx = x - peg.x;
                             let dy = y - peg.y;
@@ -1920,20 +2238,16 @@
                             let minDist = radius + peg.radius;
 
                             if (dist < minDist) {
-                                // Обработка упругого отскока от точки штырька
                                 let nx = dx / dist;
                                 let ny = dy / dist;
                                 
-                                // Выталкиваем шарик из штырька, чтобы не застревал
                                 x = peg.x + nx * minDist;
                                 y = peg.y + ny * minDist;
 
-                                // Отражение вектора скорости с потерей энергии (упругость)
                                 let dot = vx * nx + vy * ny;
                                 vx = (vx - 2 * dot * nx) * 0.75;
                                 vy = (vy - 2 * dot * ny) * 0.75;
 
-                                // Добавляем случайный толчок для вариативности
                                 vx += (Math.random() - 0.5) * 1.2;
                                 vy += Math.random() * 0.5;
 
@@ -1944,17 +2258,13 @@
                         ball.style.left = x + 'px';
                         ball.style.top = y + 'px';
 
-                        // Долетел до лунок внизу (y >= 222)
                         if (y >= 222) {
                             ball.remove();
 
-                            // Определяем слот по координате X (всего 9 слотов по ~35.5 пикселей)
                             let slotWidth = 320 / 9;
                             let slotIndex = Math.floor(x / slotWidth);
                             slotIndex = Math.max(0, Math.min(8, slotIndex));
 
-                            // Делаем редким выпадение центрального 10x (слот 4)
-                            // Если выпал 10x, с вероятностью 65% смещаем в соседние лунки (3.0x или 3.0x)
                             if (slotIndex === 4 && Math.random() < 0.65) {
                                 slotIndex = Math.random() < 0.5 ? 3 : 5;
                             }
@@ -2418,7 +2728,7 @@
             if (type === 'source') {
                 title.innerText = "Выберите ваш предмет из инвентаря";
                 if (state.inventory.length === 0) {
-                    list.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px;">Инвентарь пуст. Купите что-то в магазине!</div>`;
+                    list.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px;">Инвентарь пуст. Выбивайте призы из кейсов и яиц!</div>`;
                 } else {
                     state.inventory.forEach((item, index) => {
                         const row = document.createElement('div');
