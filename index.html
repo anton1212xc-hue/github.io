@@ -555,6 +555,8 @@
             margin: 20px 0;
             min-height: 110px;
             align-items: flex-end;
+            position: relative;
+            width: 100%;
         }
         .cup-item {
             width: 85px;
@@ -569,7 +571,7 @@
             font-size: 36px;
             cursor: pointer;
             position: relative;
-            transition: transform 0.2s ease, border-color 0.2s;
+            transition: transform 0.25s ease, border-color 0.2s, left 0.3s ease;
         }
         .cup-item:hover { border-color: var(--accent); }
         .cup-item.lifted {
@@ -790,8 +792,8 @@
 
                 <div class="game-banner cups" onclick="openGame('cups')">
                     <div>
-                        <div class="game-title">Стаканчики</div>
-                        <div class="game-desc">Угадайте, под каким стаканом скрыт предмет</div>
+                        <div class="game-title">Стаканчики (Hard)</div>
+                        <div class="game-desc">Усложненная угадайка с динамическим перемешиванием</div>
                     </div>
                     <div class="game-icon">🥛</div>
                 </div>
@@ -1000,7 +1002,6 @@
                 if (!soundEnabled) return;
                 try {
                     const ctx = getAudioContext();
-                    // Шум + резкие щелчки треска
                     for(let i=0; i<3; i++) {
                         let osc = ctx.createOscillator();
                         let gain = ctx.createGain();
@@ -1079,7 +1080,6 @@
             soundFX.click();
         }
 
-        // Автоклик со звуком для всех кнопок
         document.addEventListener('click', (e) => {
             if (e.target.closest('button') || e.target.closest('.game-banner') || e.target.closest('.case-card') || e.target.closest('.egg-mode-card')) {
                 soundFX.click();
@@ -1687,7 +1687,6 @@
                 </div>
             `;
 
-            // Звуки рулетки
             let tickCount = 0;
             let tickInterval = setInterval(() => {
                 soundFX.rouletteTick();
@@ -1743,42 +1742,53 @@
             }, 100);
         }
 
-        // --- CUPS GAME LOGIC ---
+        // --- CUPS GAME LOGIC (HARDCORE VERSION) ---
         let cupsState = {
             bet: 50,
-            difficulty: 'easy',
+            difficulty: 'hard', // По умолчанию усложненный режим
             winningCup: 0,
             isShuffling: false,
             roundReady: false,
             gameOver: false,
-            revealedCup: null
+            revealedCup: null,
+            cupPositions: [0, 1, 2], // Текущий физический порядок стаканчиков (0, 1, 2)
+            streak: 0
         };
 
         function renderCupsScreen(container) {
-            const mult = cupsState.difficulty === 'easy' ? 1.25 : 2.0;
+            const baseMult = cupsState.difficulty === 'easy' ? 1.5 : 2.5;
+            const currentMult = parseFloat((baseMult + cupsState.streak * 0.25).toFixed(2));
+
+            // Рендерим стаканчики согласно их текущим позициям в массиве cupPositions
+            let cupsHtml = '';
+            cupsState.cupPositions.forEach((originalIndex, slotIndex) => {
+                let content = '🥛';
+                if (cupsState.gameOver && cupsState.revealedCup === slotIndex) {
+                    content = (originalIndex === cupsState.winningCup) ? '💎' : '❌';
+                }
+                cupsHtml += `
+                    <div class="cup-item" id="cup_slot_${slotIndex}" onclick="chooseCup(${slotIndex})" style="order: ${slotIndex};">
+                        ${content}
+                    </div>
+                `;
+            });
 
             container.innerHTML = `
                 <div class="cups-container">
-                    <div style="font-size: 15px; font-weight: 800;">🥛 Угадайте стаканчик</div>
-                    <div style="font-size: 11px; color: var(--text-muted); text-align: center;">Множитель выигрыша: <strong style="color:var(--accent);">${mult}x</strong></div>
+                    <div style="font-size: 15px; font-weight: 800;">🥛 Стаканчики (Hard Mode)</div>
+                    <div style="font-size: 11px; color: var(--text-muted); text-align: center;">
+                        Множитель: <strong style="color:var(--accent);">${currentMult}x</strong> ${cupsState.streak > 0 ? `(Стрик побед: x${cupsState.streak})` : ''}
+                    </div>
 
-                    <div class="cups-row" id="cupsRow">
-                        <div class="cup-item" onclick="chooseCup(0)">
-                            ${(cupsState.gameOver && cupsState.revealedCup === 0) ? (cupsState.winningCup === 0 ? '💎' : '❌') : '🥛'}
-                        </div>
-                        <div class="cup-item" onclick="chooseCup(1)">
-                            ${(cupsState.gameOver && cupsState.revealedCup === 1) ? (cupsState.winningCup === 1 ? '💎' : '❌') : '🥛'}
-                        </div>
-                        <div class="cup-item" onclick="chooseCup(2)">
-                            ${(cupsState.gameOver && cupsState.revealedCup === 2) ? (cupsState.winningCup === 2 ? '💎' : '❌') : '🥛'}
-                        </div>
+                    <div class="cups-row" id="cupsRow" style="display: flex; gap: 12px; justify-content: center;">
+                        ${cupsHtml}
                     </div>
 
                     <div style="width: 100%;">
-                        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px; text-align: left;">Сложность игры</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px; text-align: left;">Сложность перемешивания</div>
                         <div class="difficulty-selector">
-                            <button class="diff-btn easy ${cupsState.difficulty === 'easy' ? 'active easy' : ''}" onclick="setCupsDiff('easy')" ${cupsState.isShuffling ? 'disabled' : ''}>Лёгкая (1.25x)</button>
-                            <button class="diff-btn hard ${cupsState.difficulty === 'hard' ? 'active hard' : ''}" onclick="setCupsDiff('hard')" ${cupsState.isShuffling ? 'disabled' : ''}>Сложная (2.0x)</button>
+                            <button class="diff-btn easy ${cupsState.difficulty === 'easy' ? 'active easy' : ''}" onclick="setCupsDiff('easy')" ${cupsState.isShuffling ? 'disabled' : ''}>Обычная (1.5x)</button>
+                            <button class="diff-btn hard ${cupsState.difficulty === 'hard' ? 'active hard' : ''}" onclick="setCupsDiff('hard')" ${cupsState.isShuffling ? 'disabled' : ''}>Экстрим (2.5x)</button>
                         </div>
                     </div>
 
@@ -1839,50 +1849,80 @@
             cupsState.gameOver = false;
             cupsState.revealedCup = null;
             cupsState.winningCup = Math.floor(Math.random() * 3);
+            cupsState.cupPositions = [0, 1, 2];
 
             renderCupsScreen(document.getElementById('gameContentBody'));
 
-            const cupElements = document.querySelectorAll('.cup-item');
-            const speed = cupsState.difficulty === 'easy' ? 250 : 120;
-            const shuffles = cupsState.difficulty === 'easy' ? 6 : 12;
+            // Анимация показа где находится бриллиант перед стартом (усложнение: держится всего 0.6 сек!)
+            const slotWithDiamond = cupsState.cupPositions.indexOf(cupsState.winningCup);
+            const initialCupEl = document.getElementById(`cup_slot_${slotWithDiamond}`);
+            if (initialCupEl) {
+                initialCupEl.classList.add('lifted');
+                initialCupEl.innerText = '💎';
+            }
+            await new Promise(r => setTimeout(r, 650));
+            if (initialCupEl) {
+                initialCupEl.classList.remove('lifted');
+                initialCupEl.innerText = '🥛';
+            }
+            await new Promise(r => setTimeout(r, 300));
+
+            // Усложненный процесс перемешивания (больше шагов, высокая скорость на Hard)
+            const speed = cupsState.difficulty === 'easy' ? 180 : 85;
+            const shuffles = cupsState.difficulty === 'easy' ? 8 : 16;
 
             for (let i = 0; i < shuffles; i++) {
                 soundFX.click();
-                let randomCup = Math.floor(Math.random() * 3);
-                cupElements[randomCup].style.transform = 'translateY(-15px)';
+                // Меняем местами два случайных стаканчика в массиве позиций
+                let idxA = Math.floor(Math.random() * 3);
+                let idxB = Math.floor(Math.random() * 3);
+                while(idxA === idxB) {
+                    idxB = Math.floor(Math.random() * 3);
+                }
+
+                // Свап
+                let temp = cupsState.cupPositions[idxA];
+                cupsState.cupPositions[idxA] = cupsState.cupPositions[idxB];
+                cupsState.cupPositions[idxB] = temp;
+
+                renderCupsScreen(document.getElementById('gameContentBody'));
                 await new Promise(r => setTimeout(r, speed));
-                cupElements[randomCup].style.transform = 'translateY(0px)';
-                await new Promise(r => setTimeout(r, speed / 2));
             }
 
             cupsState.isShuffling = false;
             cupsState.roundReady = true;
             renderCupsScreen(document.getElementById('gameContentBody'));
-            document.getElementById('cupsActionBtn').innerText = "КЛИКАЙТЕ НА СТАКАН!";
+            const actionBtn = document.getElementById('cupsActionBtn');
+            if (actionBtn) actionBtn.innerText = "УГАДЫВАЙТЕ СТАКАН!";
         }
 
-        async function chooseCup(index) {
+        async function chooseCup(slotIndex) {
             if (!cupsState.roundReady || cupsState.gameOver) return;
 
             cupsState.gameOver = true;
             cupsState.roundReady = false;
-            cupsState.revealedCup = index;
+            cupsState.revealedCup = slotIndex;
 
             renderCupsScreen(document.getElementById('gameContentBody'));
 
-            const won = (index === cupsState.winningCup);
-            const mult = cupsState.difficulty === 'easy' ? 1.25 : 2.0;
+            const chosenOriginalIndex = cupsState.cupPositions[slotIndex];
+            const won = (chosenOriginalIndex === cupsState.winningCup);
+            
+            const baseMult = cupsState.difficulty === 'easy' ? 1.5 : 2.5;
+            const currentMult = parseFloat((baseMult + cupsState.streak * 0.25).toFixed(2));
 
             if (won) {
                 soundFX.win();
-                const winAmount = Math.floor(cupsState.bet * mult);
+                cupsState.streak++;
+                const winAmount = Math.floor(cupsState.bet * currentMult);
                 state.balance += winAmount;
                 updateUI();
                 await saveCloud();
-                setTimeout(() => alert(`🎉 Победа! Под стаканом был приз. Вы выиграли ${winAmount} ⭐!`), 150);
+                setTimeout(() => alert(`🎉 Блестяще! Вы угадали стаканчик и выиграли ${winAmount} ⭐ (${currentMult}x)!`), 150);
             } else {
                 await saveCloud();
-                setTimeout(() => alert(`😢 Увы! Приз был под другим стаканом. Ставка сгорела.`), 150);
+                cupsState.streak = 0; // Сброс стрика при ошибке
+                setTimeout(() => alert(`😢 Ошибка! Бриллиант был под другим стаканом. Ставка сгорела.`), 150);
             }
         }
 
@@ -2018,7 +2058,6 @@
             minesState.isPlaying = true;
             minesState.gameOver = false;
 
-            // Фоновая мини-песенка при игре в мины
             if (minesState.bgMusicTimer) clearInterval(minesState.bgMusicTimer);
             let notes = [300, 350, 400, 450];
             let noteIdx = 0;
