@@ -788,6 +788,8 @@
             font-size: 14px;
             cursor: pointer;
             text-align: center;
+            text-decoration: none;
+            display: block;
         }
         .btn:active { transform: scale(0.97); }
         .btn:disabled { background: var(--card-border); color: var(--text-muted); cursor: not-allowed; }
@@ -1007,8 +1009,8 @@
     <div class="modal-overlay" id="withdrawModal" onclick="closeModal('withdrawModal', event)">
         <div class="modal" onclick="event.stopPropagation()">
             <h3>Вывод звёзд 📤</h3>
-            <p>Вывод производится строго через звёзды на аккаунт <strong style="color:var(--accent);">@yeban</strong>.</p>
-            <button class="btn" onclick="requestWithdraw()">Отправить заявку боту 🚀</button>
+            <p>Для вывода звёзд напишите владельцу, отправьте ему ваш <strong>игровой ID</strong> и скриншот. После выплаты он обнулит ваш баланс в базе данных.</p>
+            <a href="https://t.me/yeban" target="_blank" class="btn" style="background: var(--primary-btn);">Написать владельцу ✍️</a>
             <button class="btn" style="background:var(--card-border);" onclick="closeModal('withdrawModal')">Закрыть</button>
         </div>
     </div>
@@ -1403,14 +1405,6 @@
         function copyUsername() {
             navigator.clipboard?.writeText("@yeban");
             alert("Юзернейм @yeban скопирован!");
-        }
-
-        function requestWithdraw() {
-            if (tg && tg.sendData) {
-                tg.sendData(JSON.stringify({ action: "withdraw", balance: state.balance, user_id: state.user.id }));
-            } else {
-                alert("Заявка сформирована! (Вне Telegram отправка через sendData недоступна).");
-            }
         }
 
         function renderInventory() {
@@ -2146,7 +2140,6 @@
             updateUI();
             await saveCloud();
 
-            // 1. СТРОГО определяем реальные призы заранее
             let wonDrops = [];
             for (let i = 0; i < count; i++) {
                 wonDrops.push(rollDrop(caseObj.drops));
@@ -2161,11 +2154,8 @@
                     rouletteItems.push(rollDrop(caseObj.drops));
                 }
                 
-                // 2. ВАЖНО: Ставим САМ ВЫИГРАННЫЙ ПРИЗ на позицию 28 во все прокручиваемые элементы вокруг него, 
-                // чтобы не было визуального обмана при прокрутке!
                 let winningIndex = 28;
                 rouletteItems[winningIndex] = wonDrops[i];
-                // Также заполняем соседей (27 и 29), чтобы выигрыш выглядел гармонично
                 rouletteItems[winningIndex - 1] = wonDrops[i];
                 rouletteItems[winningIndex + 1] = wonDrops[i];
 
@@ -2223,7 +2213,6 @@
                     soundFX.win();
                     let wonItemsSummary = [];
                     
-                    // 3. Зачисляем игроку ровно то, что визуально остановилось под стрелочкой
                     for (let drop of wonDrops) {
                         if (drop.type === 'stars') {
                             state.balance += drop.amount;
