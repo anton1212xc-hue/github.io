@@ -191,28 +191,38 @@
             margin-bottom: 8px;
         }
 
-        /* CASE OPENING ROULLETE ANIMATION */
+        /* MULTI-ROULETTE CONTAINER */
+        .roulette-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+            max-width: 340px;
+            margin: 10px 0;
+            max-height: 250px;
+            overflow-y: auto;
+            padding-right: 2px;
+        }
         .roulette-container {
             position: relative;
             width: 100%;
-            max-width: 340px;
-            height: 120px;
+            height: 85px;
             background: #182030;
             border: 2px solid var(--accent);
-            border-radius: 16px;
+            border-radius: 14px;
             overflow: hidden;
-            margin: 15px 0;
+            flex-shrink: 0;
         }
         .roulette-pointer {
             position: absolute;
             top: 0;
             left: 50%;
             transform: translateX(-50%);
-            width: 4px;
+            width: 3px;
             height: 100%;
             background: var(--accent);
             z-index: 10;
-            box-shadow: 0 0 10px var(--accent);
+            box-shadow: 0 0 8px var(--accent);
         }
         .roulette-track {
             display: flex;
@@ -223,7 +233,7 @@
             will-change: transform;
         }
         .roulette-item {
-            min-width: 90px;
+            min-width: 80px;
             height: 100%;
             background: var(--card-bg);
             border-right: 1px solid var(--card-border);
@@ -231,7 +241,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 8px;
+            padding: 6px;
             text-align: center;
         }
 
@@ -1131,9 +1141,9 @@
                     </div>
 
                     <div style="display: flex; gap: 8px; width: 100%; margin-top: 10px;">
-                        <button class="btn" id="open1Btn" onclick="startCaseOpening('${caseObj.id}', 1)">Открыть 1 (⭐${caseObj.price})</button>
-                        <button class="btn" id="open3Btn" style="background:var(--success);" onclick="startCaseOpening('${caseObj.id}', 3)">Открыть 3 (⭐${caseObj.price * 3})</button>
-                        <button class="btn" id="open5Btn" style="background:var(--accent); color:#000;" onclick="startCaseOpening('${caseObj.id}', 5)">Открыть 5 (⭐${caseObj.price * 5})</button>
+                        <button class="btn" onclick="startCaseOpening('${caseObj.id}', 1)">Открыть 1 (⭐${caseObj.price})</button>
+                        <button class="btn" style="background:var(--success);" onclick="startCaseOpening('${caseObj.id}', 3)">Открыть 3 (⭐${caseObj.price * 3})</button>
+                        <button class="btn" style="background:var(--accent); color:#000;" onclick="startCaseOpening('${caseObj.id}', 5)">Открыть 5 (⭐${caseObj.price * 5})</button>
                     </div>
                 </div>
             `;
@@ -1162,59 +1172,68 @@
             updateUI();
             await saveCloud();
 
-            // Генерируем выпавшие призы
+            // Генерируем выпавшие призы для каждого кейса
             let wonDrops = [];
             for (let i = 0; i < count; i++) {
                 wonDrops.push(rollDrop(caseObj.drops));
             }
 
-            // Отключаем кнопки на время анимации
-            document.querySelectorAll('#gameContentBody button').forEach(b => b.disabled = true);
-
-            // Генерируем элементы для рулетки (ленты)
-            let rouletteItems = [];
-            for (let i = 0; i < 35; i++) {
-                rouletteItems.push(rollDrop(caseObj.drops));
-            }
-            // Ставим выигранный приз (или первый из них) ровно на нужную позицию (например, 28-й элемент)
-            let winningIndex = 28;
-            rouletteItems[winningIndex] = wonDrops[0];
-
-            let trackHtml = rouletteItems.map(item => `
-                <div class="roulette-item">
-                    <div style="font-size: 28px; margin-bottom: 4px;">${item.icon}</div>
-                    <div style="font-size: 11px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">${item.name}</div>
-                </div>
-            `).join('');
-
             const body = document.getElementById('gameContentBody');
-            body.innerHTML = `
-                <div style="width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 14px;">
-                    <div style="font-size: 16px; font-weight: 800;">Открытие кейса... 🎁</div>
-                    <div class="roulette-container" id="rouletteContainer">
+
+            // Формируем HTML для нескольких рулеток
+            let roulettesHtml = '';
+            for (let i = 0; i < count; i++) {
+                let rouletteItems = [];
+                for (let j = 0; j < 35; j++) {
+                    rouletteItems.push(rollDrop(caseObj.drops));
+                }
+                let winningIndex = 28;
+                rouletteItems[winningIndex] = wonDrops[i]; // Ставим точный приз для этой ленты
+
+                let trackHtml = rouletteItems.map(item => `
+                    <div class="roulette-item">
+                        <div style="font-size: 24px; margin-bottom: 2px;">${item.icon}</div>
+                        <div style="font-size: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">${item.name}</div>
+                    </div>
+                `).join('');
+
+                roulettesHtml += `
+                    <div class="roulette-container">
                         <div class="roulette-pointer"></div>
-                        <div class="roulette-track" id="rouletteTrack" style="transform: translateX(0px);">
+                        <div class="roulette-track" id="rouletteTrack_${i}" style="transform: translateX(0px);">
                             ${trackHtml}
                         </div>
                     </div>
-                    <div style="font-size: 13px; color: var(--text-muted);">Крутим рулетку...</div>
+                `;
+            }
+
+            body.innerHTML = `
+                <div style="width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                    <div style="font-size: 15px; font-weight: 800;">Открытие кейсов (${count} шт)... 🎁</div>
+                    <div class="roulette-wrapper">
+                        ${roulettesHtml}
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-muted);">Крутим рулетки...</div>
                 </div>
             `;
 
-            // Запускаем плавную анимацию прокрутки рулетки
+            // Запускаем плавную анимацию для каждой ленты с небольшой случайной погрешностью
             setTimeout(() => {
-                const track = document.getElementById('rouletteTrack');
-                const itemWidth = 90; // ширина одного блока .roulette-item
-                const containerCenter = 170; // половина ширины .roulette-container (340 / 2)
-                
-                // Смещаем так, чтобы выигранный элемент встал строго по центру под указатель
-                const targetOffset = (winningIndex * itemWidth) - containerCenter + (itemWidth / 2);
-                
-                track.style.transition = 'transform 3.5s cubic-bezier(0.15, 0.85, 0.15, 1)';
-                track.style.transform = `translateX(-${targetOffset}px)`;
+                for (let i = 0; i < count; i++) {
+                    const track = document.getElementById(`rouletteTrack_${i}`);
+                    if (!track) continue;
+
+                    const itemWidth = 80;
+                    const containerCenter = 170;
+                    let winningIndex = 28;
+                    
+                    const targetOffset = (winningIndex * itemWidth) - containerCenter + (itemWidth / 2) + (Math.random() * 20 - 10);
+                    
+                    track.style.transition = `transform ${3.2 + i * 0.15}s cubic-bezier(0.15, 0.85, 0.15, 1)`;
+                    track.style.transform = `translateX(-${targetOffset}px)`;
+                }
 
                 setTimeout(async () => {
-                    // Зачисляем призы в инвентарь / баланс
                     let wonItemsSummary = [];
                     for (let drop of wonDrops) {
                         if (drop.type === 'stars') {
@@ -1230,19 +1249,19 @@
                     updateUI();
                     await saveCloud();
 
-                    let resultsHtml = wonItemsSummary.map(item => `<div style="background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:10px; font-weight:700; margin-bottom:5px;">${item}</div>`).join('');
+                    let resultsHtml = wonItemsSummary.map(item => `<div style="background:rgba(255,255,255,0.05); padding:7px 12px; border-radius:10px; font-weight:700; margin-bottom:4px; font-size:13px;">${item}</div>`).join('');
 
                     body.innerHTML = `
-                        <div style="width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 14px;">
-                            <div style="font-size: 20px; font-weight: 800; color: var(--accent);">🎉 Вы выиграли!</div>
-                            <div style="width: 100%; max-height: 250px; overflow-y: auto;">
+                        <div style="width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                            <div style="font-size: 18px; font-weight: 800; color: var(--accent);">🎉 Вы выиграли!</div>
+                            <div style="width: 100%; max-height: 230px; overflow-y: auto;">
                                 ${resultsHtml}
                             </div>
                             <button class="btn" onclick="openCaseModal('${caseObj.id}')">Открыть еще</button>
                             <button class="btn" style="background:var(--card-border);" onclick="openGame('cases')">К списку кейсов</button>
                         </div>
                     `;
-                }, 3600);
+                }, 3800);
             }, 100);
         }
 
