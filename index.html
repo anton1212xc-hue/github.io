@@ -124,7 +124,6 @@
         .game-banner.upgrade { background: linear-gradient(135deg, #4f228b, #251447); border-color: #6d28d9; }
         .game-banner.plane { background: linear-gradient(135deg, #881337, #4c0519); border-color: #be123c; }
         .game-banner.mines { background: linear-gradient(135deg, #7f1d1d, #450a0a); border-color: #ef4444; }
-        .game-banner.plinko { background: linear-gradient(135deg, #701a75, #4a044e); border-color: #a855f7; }
         .game-banner.pvp { background: linear-gradient(135deg, #1e3a8a, #172554); border-color: #3b82f6; }
 
         .game-title { font-size: 17px; font-weight: 800; margin-bottom: 3px; }
@@ -641,63 +640,6 @@
             font-weight: 700;
         }
 
-        /* PLINKO STYLES */
-        .plinko-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-            width: 100%;
-            max-width: 340px;
-        }
-        .plinko-board {
-            position: relative;
-            width: 320px;
-            height: 240px;
-            background: linear-gradient(180deg, #182030, #0f1522);
-            border: 2px solid var(--card-border);
-            border-radius: 16px;
-            overflow: hidden;
-        }
-        .plinko-peg {
-            position: absolute;
-            width: 7px;
-            height: 7px;
-            background: var(--text-muted);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 3px rgba(255,255,255,0.2);
-        }
-        .plinko-ball {
-            position: absolute;
-            width: 14px;
-            height: 14px;
-            background: var(--accent);
-            border-radius: 50%;
-            box-shadow: 0 0 8px var(--accent);
-            z-index: 10;
-            transform: translate(-50%, -50%);
-        }
-        .plinko-multipliers {
-            display: flex;
-            justify-content: space-between;
-            width: 320px;
-            gap: 3px;
-            margin-top: 4px;
-        }
-        .plinko-multiplier-slot {
-            flex: 1;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            font-weight: 800;
-            border-radius: 6px;
-            color: #fff;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-
         /* Bottom Nav Bar */
         .nav-bar {
             position: fixed;
@@ -890,14 +832,6 @@
                         <div class="game-desc">Поле 3х3, выбери 1–3 мины и забирай иксы</div>
                     </div>
                     <div class="game-icon">💣</div>
-                </div>
-
-                <div class="game-banner plinko" onclick="openGame('plinko')">
-                    <div>
-                        <div class="game-title">Плинко (Plinko)</div>
-                        <div class="game-desc">Запускайте шарики в лунки с иксом</div>
-                    </div>
-                    <div class="game-icon">⚪</div>
                 </div>
             </div>
         </div>
@@ -1386,7 +1320,7 @@
         }
 
         function switchTab(tab, element) {
-            if (upgradeState.isUpgrading || pvpState.isRolling || pvpState.hasJoined || planeState.isPlaying || minesState.isPlaying || eggsState.isOpening || plinkoState.isPlaying) {
+            if (upgradeState.isUpgrading || pvpState.isRolling || pvpState.hasJoined || planeState.isPlaying || minesState.isPlaying || eggsState.isOpening) {
                 alert("Нельзя переключать вкладки во время активной игры или участия в PvP!");
                 return;
             }
@@ -1545,13 +1479,11 @@
                 renderPlaneScreen(body);
             } else if (type === 'mines') {
                 renderMinesScreen(body);
-            } else if (type === 'plinko') {
-                renderPlinkoScreen(body);
             }
         }
 
         function closeGame() {
-            if (planeState.isPlaying || minesState.isPlaying || eggsState.isOpening || plinkoState.isPlaying || pvpState.isRolling || pvpState.hasJoined || upgradeState.isUpgrading) {
+            if (planeState.isPlaying || minesState.isPlaying || eggsState.isOpening || pvpState.isRolling || pvpState.hasJoined || upgradeState.isUpgrading) {
                 alert("Нельзя выйти во время активной игры, вращения рулетки или участия в PvP раунде!");
                 return;
             }
@@ -2241,220 +2173,6 @@
                     `;
                 }, 3800);
             }, 100);
-        }
-
-        // --- PLINKO GAME LOGIC ---
-        let plinkoState = {
-            betPerBall: 100,
-            ballsCount: 5,
-            isPlaying: false
-        };
-
-        const plinkoMultipliers = [0.2, 0.5, 1.2, 3.0, 10.0, 3.0, 1.2, 0.5, 0.2];
-        const plinkoColors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#a855f7', '#22c55e', '#eab308', '#f97316', '#ef4444'];
-
-        function renderPlinkoScreen(container) {
-            let slotsHtml = plinkoMultipliers.map((m, i) => `
-                <div class="plinko-multiplier-slot" style="background: ${plinkoColors[i]};">
-                    ${m}x
-                </div>
-            `).join('');
-
-            let pegsHtml = '';
-            for (let row = 0; row < 5; row++) {
-                let pegsInRow = row + 3;
-                let rowWidth = pegsInRow * 35;
-                let startX = (320 - rowWidth) / 2 + 17.5;
-                let topPos = 35 + row * 38;
-
-                for (let p = 0; p < pegsInRow; p++) {
-                    let leftPos = startX + p * 35;
-                    pegsHtml += `<div class="plinko-peg" style="top: ${topPos}px; left: ${leftPos}px;"></div>`;
-                }
-            }
-
-            container.innerHTML = `
-                <div class="plinko-container">
-                    <div style="font-size: 15px; font-weight: 800;">⚪ Плинко (Plinko)</div>
-                    <div style="font-size: 11px; color: var(--text-muted); text-align: center;">
-                        Физика с массой и отталкиванием • Редкий 10x!
-                    </div>
-
-                    <div class="plinko-board" id="plinkoBoard">
-                        ${pegsHtml}
-                    </div>
-
-                    <div class="plinko-multipliers">
-                        ${slotsHtml}
-                    </div>
-
-                    <div style="width: 100%; display: flex; gap: 8px;">
-                        <div style="flex: 1;">
-                            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Ставка за 1 шар (⭐)</div>
-                            <input type="number" id="plinkoBetInput" class="input-field" value="${plinkoState.betPerBall}" min="10" ${plinkoState.isPlaying ? 'disabled' : ''}>
-                        </div>
-                        <div style="flex: 1;">
-                            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Кол-во шариков</div>
-                            <input type="number" id="plinkoBallsInput" class="input-field" value="${plinkoState.ballsCount}" min="1" max="20" ${plinkoState.isPlaying ? 'disabled' : ''}>
-                        </div>
-                    </div>
-
-                    <div class="bet-presets" style="width: 100%;">
-                        <button class="preset-btn" onclick="setPlinkoConfig(100, 1)" ${plinkoState.isPlaying ? 'disabled' : ''}>1 шар (100⭐)</button>
-                        <button class="preset-btn" onclick="setPlinkoConfig(100, 5)" ${plinkoState.isPlaying ? 'disabled' : ''}>5 шаров (по 100)</button>
-                        <button class="preset-btn" onclick="setPlinkoConfig(500, 5)" ${plinkoState.isPlaying ? 'disabled' : ''}>5 шаров (по 500)</button>
-                    </div>
-
-                    <button class="btn" id="plinkoActionBtn" onclick="startPlinkoDrop()" ${plinkoState.isPlaying ? 'disabled' : ''}>
-                        ЗАПУСТИТЬ ШАРИКИ ⚪
-                    </button>
-                </div>
-            `;
-        }
-
-        function setPlinkoConfig(bet, count) {
-            if (plinkoState.isPlaying) return;
-            plinkoState.betPerBall = bet;
-            plinkoState.ballsCount = count;
-            document.getElementById('plinkoBetInput').value = bet;
-            document.getElementById('plinkoBallsInput').value = count;
-        }
-
-        async function startPlinkoDrop() {
-            const betPerBallVal = parseInt(document.getElementById('plinkoBetInput').value);
-            const countVal = parseInt(document.getElementById('plinkoBallsInput').value);
-
-            if (isNaN(betPerBallVal) || betPerBallVal <= 0 || isNaN(countVal) || countVal <= 0) {
-                alert("Введите корректную ставку и количество шариков!");
-                return;
-            }
-
-            const totalCost = betPerBallVal * countVal;
-            if (totalCost > state.balance) {
-                alert(`Недостаточно звёзд! Общая стоимость ${countVal} шариков по ${betPerBallVal} ⭐ составляет ${totalCost} ⭐.`);
-                return;
-            }
-
-            plinkoState.betPerBall = betPerBallVal;
-            plinkoState.ballsCount = countVal;
-
-            state.balance -= totalCost;
-            updateUI();
-            saveCloud();
-
-            plinkoState.isPlaying = true;
-            renderPlinkoScreen(document.getElementById('gameContentBody'));
-
-            const board = document.getElementById('plinkoBoard');
-            
-            let pegs = [];
-            for (let row = 0; row < 5; row++) {
-                let pegsInRow = row + 3;
-                let rowWidth = pegsInRow * 35;
-                let startX = (320 - rowWidth) / 2 + 17.5;
-                let topPos = 35 + row * 38;
-
-                for (let p = 0; p < pegsInRow; p++) {
-                    let leftPos = startX + p * 35;
-                    pegs.push({ x: leftPos, y: topPos, radius: 4 });
-                }
-            }
-
-            let totalWon = 0;
-
-            for (let i = 0; i < plinkoState.ballsCount; i++) {
-                soundFX.click();
-                let ball = document.createElement('div');
-                ball.className = 'plinko-ball';
-                board.appendChild(ball);
-
-                let x = 160 + (Math.random() * 16 - 8);
-                let y = 10;
-                let vx = (Math.random() - 0.5) * 1.5;
-                let vy = 0.5;
-                let radius = 7;
-
-                await new Promise((resolve) => {
-                    function animatePhysics() {
-                        vy += 0.22; 
-                        vx *= 0.985;
-                        vy *= 0.99;
-
-                        x += vx;
-                        y += vy;
-
-                        if (x < radius + 4) {
-                            x = radius + 4;
-                            vx = -vx * 0.7;
-                            soundFX.rouletteTick();
-                        }
-                        if (x > 320 - radius - 4) {
-                            x = 320 - radius - 4;
-                            vx = -vx * 0.7;
-                            soundFX.rouletteTick();
-                        }
-
-                        for (let peg of pegs) {
-                            let dx = x - peg.x;
-                            let dy = y - peg.y;
-                            let dist = Math.sqrt(dx * dx + dy * dy);
-                            let minDist = radius + peg.radius;
-
-                            if (dist < minDist) {
-                                let nx = dx / dist;
-                                let ny = dy / dist;
-                                
-                                x = peg.x + nx * minDist;
-                                y = peg.y + ny * minDist;
-
-                                let dot = vx * nx + vy * ny;
-                                vx = (vx - 2 * dot * nx) * 0.75;
-                                vy = (vy - 2 * dot * ny) * 0.75;
-
-                                vx += (Math.random() - 0.5) * 1.2;
-                                vy += Math.random() * 0.5;
-
-                                soundFX.rouletteTick();
-                            }
-                        }
-
-                        ball.style.left = x + 'px';
-                        ball.style.top = y + 'px';
-
-                        if (y >= 222) {
-                            ball.remove();
-
-                            let slotWidth = 320 / 9;
-                            let slotIndex = Math.floor(x / slotWidth);
-                            slotIndex = Math.max(0, Math.min(8, slotIndex));
-
-                            if (slotIndex === 4 && Math.random() < 0.65) {
-                                slotIndex = Math.random() < 0.5 ? 3 : 5;
-                            }
-
-                            let mult = plinkoMultipliers[slotIndex];
-                            totalWon += plinkoState.betPerBall * mult;
-                            soundFX.rouletteTick();
-                            resolve();
-                        } else {
-                            requestAnimationFrame(animatePhysics);
-                        }
-                    }
-                    requestAnimationFrame(animatePhysics);
-                });
-
-                await new Promise(r => setTimeout(r, 150));
-            }
-
-            let finalWin = Math.floor(totalWon);
-            state.balance += finalWin;
-            updateUI();
-            await saveCloud();
-
-            soundFX.win();
-            plinkoState.isPlaying = false;
-            renderPlinkoScreen(document.getElementById('gameContentBody'));
-            alert(`🎉 Плинко завершено! Вы поставили ${plinkoState.ballsCount * plinkoState.betPerBall} ⭐ и выиграли ${finalWin} ⭐!`);
         }
 
         // --- MINES GAME LOGIC ---
