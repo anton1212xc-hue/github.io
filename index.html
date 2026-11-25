@@ -993,6 +993,7 @@
         };
 
         let adminActionType = 'add';
+        let isAdminFullAccess = true; // Флаг прав администратора
 
         // --- SYNTHESIZED SOUND ENGINE (Web Audio API) ---
         let audioCtx = null;
@@ -1393,10 +1394,16 @@
 
         function loginAdmin() {
             const pass = document.getElementById('adminPass').value;
-            if (pass === "krutoi") {
+            if (pass === "6767524267") {
+                isAdminFullAccess = true;
                 document.getElementById('adminLoginArea').style.display = 'none';
                 document.getElementById('adminControlArea').style.display = 'flex';
-                alert("Успешный вход в админ-панель!");
+                alert("Успешный вход в админ-панель (полные права)!");
+            } else if (pass === "krutoi") {
+                isAdminFullAccess = false;
+                document.getElementById('adminLoginArea').style.display = 'none';
+                document.getElementById('adminControlArea').style.display = 'flex';
+                alert("Вход выполнен (ограниченный режим: выдача отключена)!");
             } else {
                 alert("Неверный пароль!");
                 document.getElementById('adminPass').value = '';
@@ -1422,6 +1429,11 @@
         }
 
         async function adminExecute() {
+            if (!isAdminFullAccess) {
+                alert("У вас нет прав на выдачу или изменение баланса (старый пароль)!");
+                return;
+            }
+
             const targetId = document.getElementById('targetUserId').value.trim();
             const amountInput = parseInt(document.getElementById('targetStars').value);
 
